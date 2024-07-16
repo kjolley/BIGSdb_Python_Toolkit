@@ -1,0 +1,89 @@
+import xml.etree.ElementTree as ET 
+import bigsdb.utils
+from bigsdb.constants import COUNTRIES 
+
+
+class XML_Parser(object):
+
+    def __init__(self):
+        self.fields = []
+        self.system = {}
+        self.attributes = {}
+        self.optlists = {}
+        self.prefixes_already_defined = False
+        
+    def parse(self, xml_file):
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        system = root.find("system")
+        self.system = system.attrib
+        fields = root.findall("field")
+        for field in fields:
+            field_name = field.text.strip()
+            self.fields.append(field_name)
+            for attribute in field.attrib:
+                if field_name not in self.attributes:
+                    self.attributes[field_name] = {}
+                self.attributes[field_name][attribute] = self.__process_value(field.attrib[attribute])
+            if "optlist" in field.attrib and field.attrib["optlist"] == "yes":
+                optlist = field.find("optlist")
+                if field_name not in self.optlists:
+                    self.optlists[field_name] = []
+                for option in optlist:
+                    self.optlists[field_name].append(option.text) 
+                       
+    def get_system(self):
+        return self.system
+    
+    def get_field_list(self):
+        return self.fields
+    
+    def get_all_field_attributes(self):
+        self.__set_prefix_fields()
+        return self.attributes
+    
+    def get_field_attributes(self, field):
+        self.__set_prefix_fields()
+        return self.attributes[field]
+    
+    def get_field_option_list(self, field):
+        list = [];
+        if 'values' in self.attributes[field]:
+            special_values = self.__get_special_optlist_values(self.attributes[field]['values'])
+            for value in special_values:
+                list.append(value)
+        for value in self.optlists[field]:
+            list.append(value)
+        return list
+
+    def __set_prefix_fields(self):
+        if self.prefixes_already_defined == True:
+            return
+        for field_name in self.fields:
+            if 'prefixes' not in self.attributes[field_name]:
+                continue
+            if self.attributes[field_name]['prefixes'] in self.fields:
+                self.attributes[self.attributes[field_name]['prefixes']] \
+                ['prefixed_by'] = field_name 
+                if 'separator' in self.attributes[field_name]:
+                    self.attributes[self.attributes[field_name]['prefixes']] \
+                    ['prefix_separator'] = self.attributes[field_name]['separator']
+            else:
+                raise ValueError(f'Field {field_name} prefixes ' 
+                                + self.attributes[field_name]['prefixes'] 
+                                + ' but this is not defined.')
+
+        self.prefixes_already_defined = True
+    
+    def __process_value(self, value):
+        if value == 'CURRENT_DATE':
+            return bigsdb.utils.get_datestamp()
+        if value == 'CURRENT_YEAR':
+            return bigsdb.utils.get_current_year()
+        return value 
+    
+    def __get_special_optlist_values(self, values):
+        if values == 'COUNTRIES':
+            return bigsdb.constants.COUNTRIES.keys()
+        
+
