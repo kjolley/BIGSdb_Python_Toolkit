@@ -18,40 +18,11 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
+from bigsdb.base_application import Base_Application
+from bigsdb.xml_parser import XML_Parser 
 
-
-def get_datestamp():
-	return datetime.today().strftime('%Y-%m-%d')
-
-
-def get_current_year():
-	return datetime.today().strftime('%Y')
-
-
-def is_integer(n):
-    try:
-        int(n)
-        return True
-    except ValueError:
-        return False
-
-       
-def is_float(n):
-    try:
-        float(n)
-        return True
-    except ValueError:
-        return False
-
-
-from datetime import datetime
-
-
-def is_date(string, format="%Y-%m-%d"):
-    try:
-        datetime.strptime(string, format)
-        return True
-    except ValueError:
-        return False
+class Script(Base_Application):
     
+    pass
+
+        

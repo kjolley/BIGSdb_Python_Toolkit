@@ -1,0 +1,46 @@
+# Written by Keith Jolley
+# Copyright (c) 2024, University of Oxford
+# E-mail: keith.jolley@biology.ox.ac.uk
+#
+# This file is part of BIGSdb Python Toolkit.
+#
+# BIGSdb Python Toolkit is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# BIGSdb Python Toolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with BIGSdb Python Toolkit. If not, 
+# see <http://www.gnu.org/licenses/>.
+
+import sys
+import os
+import pathlib
+import unittest
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import bigsdb.base_application as application
+
+dir = pathlib.Path(__file__).parent.resolve()
+conf_file = f'{dir}/config_files/bigsdb.conf'
+
+class TestBaseApplication(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestBaseApplication, self).__init__(*args, **kwargs)
+        self.application = application.Base_Application(testing = True)
+        print(conf_file)
+         
+    def test_read_config_file(self):          
+        config = self.application._Base_Application__read_config_file(filename = conf_file)
+        self.assertEqual(config['auth_db'], 'bigsdb_auth')
+        self.assertTrue(isinstance(config['embargo_enabled'],int),
+                        'Config embargo_enabled value is not an int')
+         
+         
+        
