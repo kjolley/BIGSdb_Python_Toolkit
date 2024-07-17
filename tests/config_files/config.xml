@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<db>
+<system
+ db="pubmlst_bigsdb_neisseria_isolates"
+ host="zoo-lagavulin"
+ dbtype="isolates"
+ webroot="/neisseria"
+ webroot_label="*Neisseria* spp."
+ indexpage=""
+ view="isolates"
+ script_path_includes=""
+ curate_path_includes=""
+ maindisplay_aliases="yes"
+ description="Neisseria isolates"
+ formatted_description="*Neisseria* isolates"
+ authentication="builtin"
+ read_access="public"
+ user_projects="yes"
+ tblastx_tagging="yes"
+ fast_scan="yes"
+ all_plugins="yes"
+ annotation="AL157959|Z2491 (Nm);AE002098|MC58 (Nm);AM421808|FAM18 (Nm);NC_002946|FA 1090 (Ng);NC_011035|NCCP11945 (Ng);NC_014752|020-06 (Nl)"
+ hide_unused_schemes="yes"
+ default_seqdef_config="pubmlst_neisseria_seqdef"
+ default_seqdef_dbase="pubmlst_bigsdb_neisseria_seqdef"
+ genome_comparator_limit="4000"
+ submissions="yes"
+ daily_pending_submissions="10"
+ daily_rest_submissions_limit="10"
+ cache_schemes="yes"
+ related_databases="pubmlst_neisseria_seqdef|Typing"
+ curator_home="/neisseria/private"
+ views="species_meningitidis,species_gonorrhoeae"
+ delete_retire_only="yes"
+ field_groups="Antimicrobial resistance|fas fa-capsules,Tracking"
+ eav_groups="Deduced vaccine reactivity|fas fa-syringe,Risk factors|fas fa-smoking"
+ warn_max_total_length="2400000"
+ max_total_length="2700000"
+ warn_min_total_length="1800000"
+ min_total_length="1500000"
+ query_dashboard="yes"
+ search_sequence_variation="yes"
+ show_classification_schemes="yes"
+ seqbin_downloads_require_login="yes"
+ >
+</system>
+<field type="int" required="yes" length="6" maindisplay="yes" comments="primary key">id</field>
+<field type="text" required="yes" length="30" maindisplay="yes" comments="isolate name">isolate</field>
+<field type="text" required="yes" maindisplay="yes" comments="country where strain was isolated" optlist="yes" values="COUNTRIES" sort="no" annotation_metric="yes">country
+  <optlist>
+    <option>Unknown</option>
+  </optlist>
+</field>
+<field type="text" required="no" length="50" maindisplay="no" comments="region inside country">region</field>
+<field type="text" required="no" length="50" maindisplay="no" geography_point_lookup="yes" comments="this field is used in mapping so please try to ensure correct or most common spelling to facilitate GPS coordinates lookup. For US place names, please suffix 2-letter state code in square brackets, e.g. 'Dallas [TX]', to resolve ambiguities.">town_or_city</field>
+<field type="int" required="expected" length="4" maindisplay="yes" comments="year of isolation" min="1900" max="CURRENT_YEAR" annotation_metric="yes">year</field>
+<field type="date" required="no" length="10" maindisplay="no" comments="date sample was taken" max="CURRENT_DATE" group="Tracking">date_sampled</field>
+<field type="int" required="no" maindisplay="no" no_curate="yes" comments="ISO year (this may be different from the Gregorian year recorded in the year field) - value is determined automatically from the contents of the date_sampled field. This cannot be updated manually" group="Tracking">isoyear_sampled</field>
+<field type="int" required="no" maindisplay="no" no_curate="yes" comments="week of the year - value is determined automatically from the contents of the date_sampled field. This cannot be updated manually" group="Tracking">week_sampled</field>
+<field type="date" required="no" length="10" maindisplay="no" comments="date received by laboratory (may be approximate)" max="CURRENT_DATE" group="Tracking">date_received</field>
+<field type="bool" required="no" maindisplay="no" comments="result comes from non-culture diagnosis">non_culture</field>
+<field type="text" required="no" length="15" maindisplay="no" comments="epidemiological year of isolation in format mm/yyyy-mm/yyyy. This is only relevant for N. meningitidis and should be a 12 month period." regex="^\d{2}/\d{4}-\d{2}/\d{4}">epidemiological_year</field>
+<field type="int" required="no" maindisplay="no" comments="age in years" min="0" max="120">age_yr</field>
+<field type="text" required="no" maindisplay="no" comments="age range - this will be populated automatically if you enter a value for age_yr" optlist="yes" annotation_metric="yes">age_range
+<optlist>
+<option><![CDATA[<1]]></option>
+<option>1-4</option>
+<option>5-14</option>
+<option>15-24</option>
+<option>25-44</option>
+<option>45-64</option>
+<option>65+</option>
+</optlist>
+</field>
+<field type="int" required="no" maindisplay="no" comments="month part of age (0-11) for patients under 1 year old" min="0" max="11">age_mth</field>
+<field type="text" required="no" length="12" maindisplay="no" comments="sex of patient/carrier" optlist="yes">sex
+  <optlist>
+   <option>male</option>
+   <option>female</option>
+   <option>transgender male</option>
+   <option>transgender female</option>
+  </optlist>
+</field>
+<field type="text" required="no" length="40" maindisplay="yes" comments="please put other diseases in comments field" optlist="yes" annotation_metric="yes">disease
+  <optlist>
+    <option>carrier</option>
+    <option>conjunctivitis</option>
+    <option>disseminated gonococcal infection</option>
+    <option>invasive (unspecified/other)</option>
+    <option>meningitis</option>
+    <option>meningitis and septicaemia</option>
+    <option>meningococcal STI</option>
+    <option>septicaemia</option>
+    <option>uncomplicated gonorrhoea</option>
+    <option>other</option>
+  </optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="biological source of sample - please put other sources in comments field" optlist="yes" annotation_metric="yes">source
+  <optlist>
+   <option>blood</option>
+   <option>CSF</option>
+   <option>eye</option>
+   <option>female reproductive tract</option>
+   <option>joint fluid</option>
+   <option>rectal swab</option>
+   <option>sputum</option>
+   <option>throat swab</option>
+   <option>urethral swab</option>
+   <option>other</option>
+  </optlist>
+</field>
+<field type="text" required="no" length="40" maindisplay="no" optlist="yes">epidemiology
+  <optlist>
+   <option>carrier</option>
+   <option>healthy contact</option>
+   <option>sporadic case</option>
+   <option>endemic</option>
+   <option>epidemic</option>
+   <option>MSM</option>
+   <option>MSW</option>
+   <option>MSMW</option>
+   <option>pandemic</option>
+   <option>WSM</option>
+   <option>WSMW</option>
+   <option>WSW</option>
+  </optlist>
+</field>
+<field type="text" required="yes" length="40" maindisplay="yes" default="Neisseria meningitidis" optlist="yes">species
+<optlist> 
+   <option>Neisseria meningitidis</option>
+   <option>Neisseria lactamica</option>
+   <option>Neisseria gonorrhoeae</option>
+   <option>Neisseria animalis</option>
+   <option>Neisseria animaloris</option>
+   <option>Neisseria arctica</option>
+   <option>Neisseria bacilliformis</option>
+   <option>Neisseria basseii</option>
+   <option>Neisseria benedictiae</option>
+   <option>Neisseria bergeri</option>
+   <option>Neisseria blantyrii</option>
+   <option>Neisseria canis</option>
+   <option>Neisseria cinerea</option>
+   <option>Neisseria dentiae</option>
+   <option>Neisseria dentrificans</option>
+   <option>Neisseria dumasiana</option>
+   <option>Neisseria elongata</option>
+   <option>Neisseria elongata subsp. elongata</option>
+   <option>Neisseria elongata subsp. glycolytica</option>
+   <option>Neisseria elongata subsp. nitroreducens</option>
+   <option>Neisseria flava</option>
+   <option>Neisseria flavescens</option>
+   <option>Neisseria iguanae</option>
+   <option>Neisseria lisongii</option>
+   <option>Neisseria macacae</option>
+   <option>Neisseria maigaei</option>
+   <option>Neisseria montereyensis</option>
+   <option>Neisseria mucosa</option>
+   <option>Neisseria mucosa subsp. heidelbergensis</option>
+   <option>Neisseria musculi</option>
+   <option>Neisseria oralis</option>
+   <option>Neisseria perflava</option>
+   <option>Neisseria polysaccharea</option>
+   <option>Neisseria shayeganii</option>
+   <option>Neisseria sicca</option>
+   <option>Neisseria skkuensis</option>
+   <option>Neisseria subflava</option>
+   <option>Neisseria tadorna</option>
+   <option>Neisseria uirgultaei</option>
+   <option>Neisseria viridiae</option>  
+   <option>Neisseria wadsworthii</option>
+   <option>Neisseria weaveri</option>
+   <option>Neisseria yangbaofengii</option>
+   <option>Neisseria zoodegmatis</option>
+   <option>Neisseria sp.</option>
+   <option>Non-Neisseria sp.</option>
+  </optlist>
+</field>
+<field type="text" required="no" length="20" maindisplay="no" comments="group determined by serological means. If you select 'other' please provide further details in the comments field. Values in this field from legacy data may have been determined by genotypic means, but for new data this should only represent values determined by serology." optlist="yes">serogroup
+  <optlist>
+   <option>A</option>
+   <option>B</option>
+   <option>C</option>
+   <option>E</option>
+   <option>W</option>
+   <option>W/Y</option>
+   <option>X</option>
+   <option>Y</option>
+   <option>Z</option>
+   <option>H</option>
+   <option>J</option>
+   <option>K</option>
+   <option>L</option>
+   <option>NG</option>
+   <option>other</option>
+  </optlist>
+</field>
+<field type="text" required="no" length="20" maindisplay="no" optlist="yes" comments="group determined by genotypic means">genogroup
+  <optlist>
+   <option>A</option>
+   <option>B</option>
+   <option>C</option>
+   <option>E</option>
+   <option>W</option>
+   <option>W/Y</option>
+   <option>X</option>
+   <option>Y</option>
+   <option>Z</option>
+   <option>H</option>
+   <option>J</option>
+   <option>K</option>
+   <option>L</option>
+   <option>cnl</option>
+   <option>NG</option>
+  </optlist>
+</field>
+<field type="text" length="1000" required="no" maindisplay="no" comments="details about genogroup prediction" no_submissions="yes">genogroup_notes</field>
+<field type="text" required="no" maindisplay="yes" no_curate="yes" comments="capsular group value is determined automatically from the contents of the serogroup and genogroup fields. This cannot be updated manually">capsule_group</field>
+<field type="text" required="no" length="15" maindisplay="no">serotype</field>
+<field type="text" required="no" length="15" maindisplay="no">sero_subtype</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="amoxicillin_mic">amoxicillin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">amoxicillin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="azithromycin_mic">azithromycin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">azithromycin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="cefixime_mic">cefixime_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">cefixime_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Ng (S: &lt;=0.125; R: &gt;0.125). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">cefixime_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="cefotaxime_mic">cefotaxime_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">cefotaxime_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=0.125; R: &gt;0.125); Ng (S: &lt;=0.125; R: &gt;0.125). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">cefotaxime_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="ceftriaxone_mic">ceftriaxone_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">ceftriaxone_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=0.125; R: &gt;0.125); Ng (S: &lt;=0.125; R: &gt;0.125). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">ceftriaxone_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="chloramphenicol_mic">chloramphenicol_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">chloramphenicol_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=2; R: &gt;2). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">chloramphenicol_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="ciprofloxacin_mic">ciprofloxacin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">ciprofloxacin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=0.03; R: &gt;0.03); Ng (S: &lt;=0.03; I: &gt;0.03-0.06; R: &gt;0.06). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">ciprofloxacin_SIR
+<optlist>
+<option>S</option>
+<option>I</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="penicillin_mic">penicillin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">penicillin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=0.25; R: &gt;0.25); Ng (S: &lt;=0.06; I: &gt;0.06-1; R: &gt;1). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">penicillin_SIR
+<optlist>
+<option>S</option>
+<option>I</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="rifampicin_mic">rifampicin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">rifampicin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=0.25; R: &gt;0.25). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">rifampicin_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="spectinomycin_mic">spectinomycin_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">spectinomycin_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Ng (S: &lt;=64; R: &gt;64). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">spectinomycin_SIR
+<optlist>
+<option>S</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="sulphonamide_mic">sulphonamide_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">sulphonamide_mic</field>
+<field type="text" required="no" maindisplay="no" comments="indicate if MIC result is greater than, less than, or equal the set value" optlist="yes" group="Antimicrobial resistance" prefixes="tetracycline_mic">tetracycline_mic_sign
+<optlist>
+<option><![CDATA[<]]></option>
+<option><![CDATA[>]]></option>
+<option><![CDATA[=]]></option>
+</optlist>
+</field>
+<field type="float" required="no" maindisplay="no" comments="MIC in mg/l" group="Antimicrobial resistance" suffix=" μg/mL">tetracycline_mic</field>
+<field type="text" required="no" maindisplay="no" comments="S: susceptible, standard dose; I: susceptible, increased exposure; R: resistant. Based on EUCAST defined breakpoints: Nm (S: &lt;=2; R: &gt;2); Ng (S: &lt;=0.5; I: &gt;0.5-1; R: &gt;1). Field value will be populated automatically if MIC value is provided." optlist="yes" no_curate="yes" group="Antimicrobial resistance">tetracycline_SIR
+<optlist>
+<option>S</option>
+<option>I</option>
+<option>R</option>
+</optlist>
+</field>
+<field type="bool" default="false" required="no" maindisplay="no" no_submissions="yes">type_strain</field>
+<field type="text" required="no" length="60" maindisplay="no" curate_only="yes" comments="for internal use" group="Tracking">pending_assembly</field>
+<field type="text" required="no" length="60" maindisplay="no" curate_only="yes" comments="for internal use" group="Tracking">assembly_status</field>
+<field type="text" required="no" length="20" maindisplay="no" web="https://www.ebi.ac.uk/ena/browser/view/[?]" comments="ENA/SRA bioproject accession number" multiple="yes" group="Tracking">bioproject_accession</field>
+<field type="text" required="genome_expected" length="20" maindisplay="no" web_regex="^SAM|https://www.ebi.ac.uk/ena/browser/view/[?]?dataType=BIOSAMPLE;^[EDS]RS|https://www.ebi.ac.uk/ena/browser/view/[?]?dataType=SAMPLE" web="https://www.ebi.ac.uk/ena/browser/view/[?]" comments="ENA/SRA biosample accession number" multiple="yes" group="Tracking">biosample_accession</field>
+<field type="text" required="no" length="20" maindisplay="no" web="https://www.ncbi.nlm.nih.gov/assembly/[?]" multiple="yes" comments="NCBI assembly accessions should begin with GCA_ or GCF_" regex="^GC[AF]_\d+" group="Tracking">NCBI_assembly_accession</field>
+<field type="text" required="genome_expected" length="15" maindisplay="no" web="https://www.ebi.ac.uk/ena/browser/view/[?]" comments="ENA/SRA accession number to access short read data. This should start either ERR, SRR, or DRR." regex="^(E|D|S)RR[0-9]{6,}$" group="Tracking">run_accession</field>
+<field type="text" required="no" length="500" maindisplay="no" comments="any other comments" multiple="yes">comments</field>
+<field type="int" required="yes" length="4" maindisplay="no" comments="sender unique name, link to users" group="Tracking">sender</field>
+<field type="int" required="yes" length="4" maindisplay="no" comments="curator who entered data,link to users" group="Tracking">curator</field>
+<field type="date" required="yes" length="10" maindisplay="no" comments="date first entered" group="Tracking">date_entered</field>
+<field type="date" required="yes" length="10" maindisplay="no" comments="date last modified" group="Tracking">datestamp</field>
+</db>

@@ -1,4 +1,25 @@
-import xml.etree.ElementTree as ET 
+#Written by Keith Jolley
+#Copyright (c) 2024, University of Oxford
+#E-mail: keith.jolley@biology.ox.ac.uk
+#
+#This file is part of BIGSdb Python Toolkit.
+#
+#BIGSdb Python Toolkit is free software: you can redistribute it and/or
+#modify it under the terms of the GNU General Public License as published
+#by the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+#
+#BIGSdb Python Toolkit is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with BIGSdb Python Toolkit. If not, 
+#see <http://www.gnu.org/licenses/>.
+
+import xml.etree.ElementTree as ET
+import pyuca 
 import bigsdb.utils
 from bigsdb.constants import COUNTRIES 
 
@@ -54,6 +75,9 @@ class XML_Parser(object):
                 list.append(value)
         for value in self.optlists[field]:
             list.append(value)
+        if 'sort' in self.attributes[field] and self.attributes[field]['sort'] == 'yes':
+            collator = pyuca.Collator()
+            list = sorted(list, key=collator.sort_key)           
         return list
 
     def __set_prefix_fields(self):
@@ -85,5 +109,3 @@ class XML_Parser(object):
     def __get_special_optlist_values(self, values):
         if values == 'COUNTRIES':
             return bigsdb.constants.COUNTRIES.keys()
-        
-
