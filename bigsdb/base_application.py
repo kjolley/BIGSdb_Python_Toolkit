@@ -40,7 +40,6 @@ class Base_Application(object):
         self.instance = database
         self.config = self.__read_config_file()
         self.__read_dbase_config_file()
-        
         self.__set_system_overrides()
 #        print(self.system)
 #        print(self.config)

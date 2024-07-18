@@ -27,20 +27,25 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import bigsdb.base_application as application
 
 dir = pathlib.Path(__file__).parent.resolve()
-conf_file = f'{dir}/config_files/bigsdb.conf'
+
 
 class TestBaseApplication(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestBaseApplication, self).__init__(*args, **kwargs)
-        self.application = application.Base_Application(testing = True)
-        print(conf_file)
+        self.application = application.Base_Application(testing=True)
          
-    def test_read_config_file(self):          
-        config = self.application._Base_Application__read_config_file(filename = conf_file)
+    def test_read_config_file(self): 
+        conf_file = f'{dir}/config_files/bigsdb.conf'   
+        config = self.application._Base_Application__read_config_file(filename=conf_file)
         self.assertEqual(config['auth_db'], 'bigsdb_auth')
-        self.assertTrue(isinstance(config['embargo_enabled'],int),
+        self.assertTrue(isinstance(config['embargo_enabled'], int),
                         'Config embargo_enabled value is not an int')
-         
-         
+        
+    def test_read_system_overrides(self):
+        dbase_config = f'{dir}/config_files/config.xml'   
+        overrides_file = f'{dir}/config_files/system.overrides'    
+        self.application._Base_Application__read_dbase_config_file(filename=dbase_config)
+        self.application._Base_Application__set_system_overrides(filename=overrides_file)
+        self.assertEqual(self.application.system['max_total_length'], 2800000)
         
