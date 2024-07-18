@@ -24,7 +24,7 @@ import bigsdb.utils
 from bigsdb.constants import COUNTRIES 
 
 
-class XML_Parser(object):
+class XMLParser(object):
 
     def __init__(self):
         self.fields = []

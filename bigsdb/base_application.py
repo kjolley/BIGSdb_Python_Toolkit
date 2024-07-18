@@ -21,16 +21,16 @@
 import configparser
 from pathlib import Path
 import bigsdb.utils
-import bigsdb.xml_parser as xml_parser
+from bigsdb.xml_parser import XMLParser
+from bigsdb.data_connector import DataConnector
+from bigsdb.constants import DIRS, CONNECTION_DETAILS 
 
-CONFIG_DIR = '/etc/bigsdb'
-DBASE_CONFIG_DIR = '/etc/bigsdb/dbases'
 
-
-class Base_Application(object):
+class BaseApplication(object):
     
-    def __init__(self, database=None, config_dir=CONFIG_DIR,
-                 dbase_config_dir=DBASE_CONFIG_DIR, testing=False):
+    def __init__(self, database=None, config_dir=DIRS['CONFIG_DIR'],
+                 dbase_config_dir=DIRS['DBASE_CONFIG_DIR'], host=None,
+                 port=None, user=None, password=None, testing=False):
         self.config_dir = config_dir
         self.dbase_config_dir = dbase_config_dir
         if testing:
@@ -43,9 +43,19 @@ class Base_Application(object):
         self.__read_host_mapping_file()
         self.__read_dbase_config_xml_file()
         self.__set_system_overrides()
-        
-#        print(self.system)
-        print(self.config)
+        self.system['host'] = host or self.system.get('host') \
+            or self.config.get('host', CONNECTION_DETAILS['HOST'])
+        self.system['port'] = port or self.system.get('port') \
+            or self.config.get('port', CONNECTION_DETAILS['PORT'])
+        self.system['user'] = user or self.system.get('user') \
+            or self.config.get('user', CONNECTION_DETAILS['USER'])
+        self.system['password'] = password or self.system.get('password') \
+            or self.config.get('password', CONNECTION_DETAILS['PASSWORD'])
+        if self.system.get('dbtype', '') == 'isolates':
+            self.system['view'] = self.system.get('view', 'isolates')
+            self.system['labelfield'] = self.system.get('labelfield', 'isolate')
+        self.data_connector = DataConnector(system=self.system, config=self.config)
+        self.__initiate_auth_db()
         
     def __read_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/bigsdb.conf"
@@ -92,15 +102,14 @@ class Base_Application(object):
         with open(filename) as file:
             for line in file:
                 if not line.startswith('#') and not line == '':
-                    l=line.split()
-                    if len(l) >= 2:
-                        print(l[0] + ": " + l[1])
-                        self.config['host_map'][l[0].strip()] = l[1].strip()
+                    list = line.split()
+                    if len(list) >= 2:
+                        self.config['host_map'][list[0].strip()] = list[1].strip()
 
     def __read_dbase_config_xml_file(self, filename=None):
         filename = filename or f'{self.dbase_config_dir}/{self.instance}/config.xml'
         if Path(filename).is_file():
-            self.parser = xml_parser.XML_Parser()
+            self.parser = XMLParser()
             self.parser.parse(filename)
             self.system = self.parser.get_system()
         else:
@@ -124,3 +133,13 @@ class Base_Application(object):
             elif (bigsdb.utils.is_date(value)):
                 value = date(value) 
             self.system[key] = value
+            
+    def __initiate_auth_db(self):
+        host = self.config['dbhost'] or self.system['host']
+        port = self.config['dbport'] or self.system['port']
+        user = self.config['dbuser'] or self.system['user']
+        password = self.config['dbpassword'] or self.system['password']
+        self.auth_db = self.data_connector.get_connection(
+            dbase_name=self.config['auth_db'], host=host, port=port,
+            user=user, password=password)
+        

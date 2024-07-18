@@ -18,6 +18,18 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
+DIRS = {
+    'CONFIG_DIR': '/etc/bigsdb',
+    'DBASE_CONFIG_DIR': '/etc/bigsdb/dbases'
+}
+
+CONNECTION_DETAILS = {
+    'HOST': 'localhost',
+    'PORT': 5432,
+    'USER': 'apache',
+    'PASSWORD': 'remote'
+}
+
 COUNTRIES = {
     'Afghanistan': { 'iso2': 'AF', 'iso3': 'AFG', 'continent': 'Asia' },
     'Åland Islands': { 'iso2': 'AX', 'iso3': 'ALA', 'continent': 'Europe' },

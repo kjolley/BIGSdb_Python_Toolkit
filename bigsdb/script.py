@@ -18,11 +18,16 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
-from bigsdb.base_application import Base_Application
-from bigsdb.xml_parser import XML_Parser 
+from bigsdb.base_application import BaseApplication
+from bigsdb.constants import DIRS
 
-class Script(Base_Application):
-    
-    pass
 
-        
+class Script(BaseApplication):
+
+    def __init__(self, database=None, config_dir=DIRS['CONFIG_DIR'],
+                 dbase_config_dir=DIRS['DBASE_CONFIG_DIR'], host=None,
+                 port=None, user=None, password=None, testing=False):
+        super(Script, self).__init__(database=database, config_dir=config_dir,
+                 dbase_config_dir=dbase_config_dir, host=host, port=port, user=user,
+                 password=password)
+            

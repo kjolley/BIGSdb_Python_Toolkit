@@ -34,7 +34,7 @@ class TestXmlParser(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestXmlParser, self).__init__(*args, **kwargs)
-        self.parser = xml_parser.XML_Parser()
+        self.parser = xml_parser.XMLParser()
         self.parser.parse(xml_file)
                
     def test_system(self):
