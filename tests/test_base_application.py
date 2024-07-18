@@ -48,10 +48,16 @@ class TestBaseApplication(unittest.TestCase):
         self.application._Base_Application__read_db_config_file(filename=conf_file)
         self.assertEqual(self.application.config['dbhost'],'server1')
         
+    def test_read_host_mapping_file(self):
+        conf_file = f'{dir}/config_files/host_mapping.conf'
+        self.application.config = {}
+        self.application._Base_Application__read_host_mapping_file(filename=conf_file)
+        self.assertTrue(self.application.config['host_map']['server1'] == 'server2')
+        
     def test_read_system_overrides(self):
         dbase_config = f'{dir}/config_files/config.xml'   
         overrides_file = f'{dir}/config_files/system.overrides'    
-        self.application._Base_Application__read_dbase_config_file(filename=dbase_config)
+        self.application._Base_Application__read_dbase_config_xml_file(filename=dbase_config)
         self.application._Base_Application__set_system_overrides(filename=overrides_file)
         self.assertEqual(self.application.system['max_total_length'], 2800000)
         

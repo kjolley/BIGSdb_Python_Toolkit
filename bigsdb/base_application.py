@@ -39,9 +39,11 @@ class Base_Application(object):
             raise ValueError('No database parameter passed.')
         self.instance = database
         self.config = self.__read_config_file()
-        self.__read_dbase_config_file()
-        self.__set_system_overrides()
         self.__read_db_config_file()
+        self.__read_host_mapping_file()
+        self.__read_dbase_config_xml_file()
+        self.__set_system_overrides()
+        
 #        print(self.system)
         print(self.config)
         
@@ -69,7 +71,7 @@ class Base_Application(object):
         return dict
     
     def __read_db_config_file(self, filename=None):
-        filename = filename or f"{self.config_dir}/db.conf"
+        filename = filename or f'{self.config_dir}/db.conf'
         if not Path(filename).is_file():
             return
         with open(filename, 'r') as f:
@@ -81,8 +83,21 @@ class Base_Application(object):
             if (bigsdb.utils.is_integer(value)):
                 value = int(value)
             self.config[key] = value
+            
+    def __read_host_mapping_file(self, filename=None):
+        filename = filename or f'{self.config_dir}/host_mapping.conf'
+        if not Path(filename).is_file():
+            return
+        self.config['host_map'] = {}
+        with open(filename) as file:
+            for line in file:
+                if not line.startswith('#') and not line == '':
+                    l=line.split()
+                    if len(l) >= 2:
+                        print(l[0] + ": " + l[1])
+                        self.config['host_map'][l[0].strip()] = l[1].strip()
 
-    def __read_dbase_config_file(self, filename=None):
+    def __read_dbase_config_xml_file(self, filename=None):
         filename = filename or f'{self.dbase_config_dir}/{self.instance}/config.xml'
         if Path(filename).is_file():
             self.parser = xml_parser.XML_Parser()
