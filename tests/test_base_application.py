@@ -11,12 +11,12 @@
 #
 # BIGSdb Python Toolkit is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with BIGSdb Python Toolkit. If not, 
-# see <http://www.gnu.org/licenses/>.
+# see <https://www.gnu.org/licenses/>.
 
 import sys
 import os
@@ -41,6 +41,12 @@ class TestBaseApplication(unittest.TestCase):
         self.assertEqual(config['auth_db'], 'bigsdb_auth')
         self.assertTrue(isinstance(config['embargo_enabled'], int),
                         'Config embargo_enabled value is not an int')
+        
+    def test_read_db_conf_file(self):
+        conf_file = f'{dir}/config_files/db.conf'
+        self.application.config = {}
+        self.application._Base_Application__read_db_config_file(filename=conf_file)
+        self.assertEqual(self.application.config['dbhost'],'server1')
         
     def test_read_system_overrides(self):
         dbase_config = f'{dir}/config_files/config.xml'   

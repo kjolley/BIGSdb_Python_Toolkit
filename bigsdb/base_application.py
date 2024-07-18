@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with BIGSdb Python Toolkit. If not, see 
-# <http://www.gnu.org/licenses/>.
+# <https://www.gnu.org/licenses/>.
 
 import configparser
 from pathlib import Path
@@ -41,11 +41,14 @@ class Base_Application(object):
         self.config = self.__read_config_file()
         self.__read_dbase_config_file()
         self.__set_system_overrides()
+        self.__read_db_config_file()
 #        print(self.system)
-#        print(self.config)
+        print(self.config)
         
     def __read_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/bigsdb.conf"
+        if not Path(filename).is_file():
+           raise ValueError(f'Main config file {filename} does not exist.') 
         with open(filename, 'r') as f:
              ini_data = '[General]\n' + f.read()
         config = configparser.ConfigParser()
@@ -60,8 +63,25 @@ class Base_Application(object):
             elif (bigsdb.utils.is_date(value)):
                 value = date(value)          
             dict[key] = value
+        # refdb attribute has been renamed ref_db for consistency 
+        # with other databases (refdb still works)
+        dict['ref_db'] = dict.get('ref_db', dict.get('refdb'))
         return dict
     
+    def __read_db_config_file(self, filename=None):
+        filename = filename or f"{self.config_dir}/db.conf"
+        if not Path(filename).is_file():
+            return
+        with open(filename, 'r') as f:
+             ini_data = '[General]\n' + f.read()
+        config = configparser.ConfigParser()
+        config.read_string(ini_data)
+        for key in config['General']:
+            value = config['General'][key]
+            if (bigsdb.utils.is_integer(value)):
+                value = int(value)
+            self.config[key] = value
+
     def __read_dbase_config_file(self, filename=None):
         filename = filename or f'{self.dbase_config_dir}/{self.instance}/config.xml'
         if Path(filename).is_file():
@@ -88,5 +108,4 @@ class Base_Application(object):
                 value = float(value)
             elif (bigsdb.utils.is_date(value)):
                 value = date(value) 
-            print (f'{key}: {value}')         
             self.system[key] = value
