@@ -19,10 +19,12 @@
 # <https://www.gnu.org/licenses/>.
 
 import configparser
+import logging
 from pathlib import Path
 import bigsdb.utils
 from bigsdb.xml_parser import XMLParser
 from bigsdb.data_connector import DataConnector
+from bigsdb.datastore import Datastore
 from bigsdb.constants import DIRS, CONNECTION_DETAILS 
 
 
@@ -30,9 +32,11 @@ class BaseApplication(object):
     
     def __init__(self, database=None, config_dir=DIRS['CONFIG_DIR'],
                  dbase_config_dir=DIRS['DBASE_CONFIG_DIR'], host=None,
-                 port=None, user=None, password=None, testing=False):
+                 port=None, user=None, password=None, testing=False,
+                 logger=None):
         self.config_dir = config_dir
         self.dbase_config_dir = dbase_config_dir
+        self.logger = logger
         if testing:
             return
         if database == None:
@@ -54,8 +58,10 @@ class BaseApplication(object):
         if self.system.get('dbtype', '') == 'isolates':
             self.system['view'] = self.system.get('view', 'isolates')
             self.system['labelfield'] = self.system.get('labelfield', 'isolate')
-        self.data_connector = DataConnector(system=self.system, config=self.config)
-        self.__initiate_auth_db()
+        self.data_connector = DataConnector(system=self.system, 
+                        config=self.config, logger=self.logger)
+        self.__db_connect()
+        self.__setup_datastore()
         
     def __read_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/bigsdb.conf"
@@ -96,9 +102,9 @@ class BaseApplication(object):
             
     def __read_host_mapping_file(self, filename=None):
         filename = filename or f'{self.config_dir}/host_mapping.conf'
+        self.config['host_map'] = {}
         if not Path(filename).is_file():
             return
-        self.config['host_map'] = {}
         with open(filename) as file:
             for line in file:
                 if not line.startswith('#') and not line == '':
@@ -133,13 +139,14 @@ class BaseApplication(object):
             elif (bigsdb.utils.is_date(value)):
                 value = date(value) 
             self.system[key] = value
-            
-    def __initiate_auth_db(self):
-        host = self.config['dbhost'] or self.system['host']
-        port = self.config['dbport'] or self.system['port']
-        user = self.config['dbuser'] or self.system['user']
-        password = self.config['dbpassword'] or self.system['password']
-        self.auth_db = self.data_connector.get_connection(
-            dbase_name=self.config['auth_db'], host=host, port=port,
-            user=user, password=password)
+               
+    def __db_connect(self):
+        self.db = self.data_connector.get_connection(
+            dbase_name=self.system['db'], host=self.system['host'],
+            port=self.system['port'], user=self.system['user'],
+            password=self.system['password'])   
         
+    def __setup_datastore(self):
+        self.datastore = Datastore(db=self.db,
+            data_connector=self.data_connector, system=self.system,
+            config=self.config, parser=self.parser, logger=self.logger)

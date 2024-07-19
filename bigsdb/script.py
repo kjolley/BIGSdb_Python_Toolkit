@@ -18,16 +18,43 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
+import logging
 from bigsdb.base_application import BaseApplication
 from bigsdb.constants import DIRS
-
 
 class Script(BaseApplication):
 
     def __init__(self, database=None, config_dir=DIRS['CONFIG_DIR'],
                  dbase_config_dir=DIRS['DBASE_CONFIG_DIR'], host=None,
-                 port=None, user=None, password=None, testing=False):
+                 port=None, user=None, password=None, logger=None,
+                 testing=False):
+        self.__init_logger(logger=logger)
+ 
         super(Script, self).__init__(database=database, config_dir=config_dir,
                  dbase_config_dir=dbase_config_dir, host=host, port=port, user=user,
-                 password=password)
+                 password=password, logger=self.logger)
+        
+    def __init_logger(self,logger=None):
+        if logger:
+            return
+        self.logger = logging.getLogger(__name__)
+        log_file = '/var/log/bigsdb_scripts.log'
+        
+        # Create handlers
+        c_handler = logging.StreamHandler()
+        f_handler = logging.FileHandler(log_file)
+        c_handler.setLevel(logging.WARNING)
+        f_handler.setLevel(logging.ERROR)
+        
+        # Create formatters and add it to handlers
+        c_format = logging.Formatter('%(levelname)s - %(module)s:%(lineno)d - %(message)s')
+        f_format = logging.Formatter('%(asctime)s - %(levelname)s: - %(module)s:%(lineno)d - %(message)s')
+        c_handler.setFormatter(c_format)
+        f_handler.setFormatter(f_format)
+        
+        # Add handlers to the logger
+        self.logger.addHandler(c_handler)
+        self.logger.addHandler(f_handler)
+        
+        
             
