@@ -43,38 +43,38 @@ class Datastore(object):
             values = [values]
         db = options.get('db', self.db)
         fetch = options.get('fetch', 'row_array')
-        sql = None
         qry = replace_placeholders(qry)
 
-        sql = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        sql.execute(qry, values)
+        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute(qry, values)
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")        
+        
         if fetch == 'col_arrayref':
             data = None
             try:
-                data = [row[0] for row in sql.fetchall()]
+                data = [row[0] for row in cursor.fetchall()]
             except Exception as e:
                 self.logger.error(f"{e} Query:{qry}")
             return data
-        try:
-            sql.execute(qry, values)
-        except Exception as e:
-            self.logger.error(f"{e} Query:{qry}")
+
         # No differentiation between Perl DBI row_array and row_arrayref in Python.
         if fetch == 'row_arrayref' or fetch == 'row_array':
-            return sql.fetchone()
+            return cursor.fetchone()
         if fetch == 'row_hashref':
-            return dict(sql.fetchone())
+            return dict(cursor.fetchone())
         if fetch == 'all_hashref':
             if 'key' not in options:
                 self.logger.error('Key field(s) needs to be passed.')
-            return {row[options['key']]: dict(row) for row in sql.fetchall()}
+            return {row[options['key']]: dict(row) for row in cursor.fetchall()}
         if fetch == 'all_arrayref':
             if 'slice' in options and options['slice']:
-                return [{key: dict(row)[key] for key in options['slice']} for row in sql.fetchall()]
+                return [{key: dict(row)[key] for key in options['slice']} for row in cursor.fetchall()]
             elif 'slice' in options:  # slice = {}
-                return [dict(row) for row in sql.fetchall()]
+                return [dict(row) for row in cursor.fetchall()]
             else:
-                return sql.fetchall()
+                return cursor.fetchall()
         self.logger.error('Query failed - invalid fetch method specified.')
         return None
 
