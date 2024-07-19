@@ -37,7 +37,6 @@ class Datastore(object):
         self.system = system
         self.logger = logger
         self.curate = curate
-        self.sql_cache = {}
         
     def run_query(self, qry, values=[], options={}):
         if type(values) is not list:
@@ -46,15 +45,9 @@ class Datastore(object):
         fetch = options.get('fetch', 'row_array')
         sql = None
         qry = replace_placeholders(qry)
-        if 'cache' in options:
-            if options['cache'] not in self.sql_cache:
-                self.sql_cache[options['cache']] = \
-                    db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-                self.sql_cache[options['cache']].execute(qry, values)
-            sql = self.sql_cache[options['cache']]
-        else:
-            sql = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-            sql.execute(qry, values)
+
+        sql = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        sql.execute(qry, values)
         if fetch == 'col_arrayref':
             data = None
             try:
