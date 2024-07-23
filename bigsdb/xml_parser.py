@@ -56,8 +56,17 @@ class XMLParser(object):
     def get_system(self):
         return self.system
     
-    def get_field_list(self):
-        return self.fields
+    def get_field_list(self, options={}):       
+        fields = []
+        for field in self.fields:
+            if options.get('no_curate_only', False) and self.attributes[field].get('curate_only','') == 'yes':
+                continue
+            if options.get('multivalue_only', False) and self.attributes[field].get('multiple','') != 'yes':
+                continue
+            if not options.get('show_hidden', False) and self.attributes[field].get('hide','') == 'yes':
+                continue        
+            fields.append(field)
+        return fields
     
     def get_all_field_attributes(self):
         self.__set_prefix_fields()

@@ -33,7 +33,7 @@ class BaseApplication(object):
     def __init__(self, database=None, config_dir=DIRS['CONFIG_DIR'],
                  dbase_config_dir=DIRS['DBASE_CONFIG_DIR'], host=None,
                  port=None, user=None, password=None, testing=False,
-                 logger=None):
+                 logger=None, options={}):
         self.config_dir = config_dir
         self.dbase_config_dir = dbase_config_dir
         self.logger = logger
@@ -62,6 +62,8 @@ class BaseApplication(object):
                         config=self.config, logger=self.logger)
         self.__db_connect()
         self.__setup_datastore()
+        if not options.get('no_user_db_needed',False):
+            self.datastore.initiate_user_dbs()
         
     def __read_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/bigsdb.conf"

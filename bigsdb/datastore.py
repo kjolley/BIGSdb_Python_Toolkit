@@ -37,6 +37,8 @@ class Datastore(object):
         self.system = system
         self.logger = logger
         self.curate = curate
+        self.username_cache = {}
+        self.user_dbs = {}
         
     def run_query(self, qry, values=[], options={}):
         if type(values) is not list:
@@ -70,13 +72,81 @@ class Datastore(object):
             return {row[options['key']]: dict(row) for row in cursor.fetchall()}
         if fetch == 'all_arrayref':
             if 'slice' in options and options['slice']:
-                return [{key: dict(row)[key] for key in options['slice']} for row in cursor.fetchall()]
+                return [{key: dict(row)[key] for key in options['slice']} for 
+                        row in cursor.fetchall()]
             elif 'slice' in options:  # slice = {}
                 return [dict(row) for row in cursor.fetchall()]
             else:
                 return cursor.fetchall()
         self.logger.error('Query failed - invalid fetch method specified.')
         return None
+
+    def initiate_user_dbs(self):
+        configs = self.run_query('SELECT * FROM user_dbases ORDER BY id', 
+                                 None, {'fetch': 'all_arrayref', 'slice': {}})
+        for config in configs:
+            try:
+                self.user_dbs[config['id']] = {
+                    'db': self.data_connector.get_connection(
+                        dbase_name = config.get('dbase_name'),
+                        host = config.get('dbase_host') or self.config.get('dbhost') or self.system.get('host'),
+                        port = config.get('dbase_port') or self.config.get('dbport') or self.system.get('port'),
+                        user = config.get('dbase_user') or self.config.get('dbuser') or self.system.get('user'),
+                        password = config.get('dbase_password') or self.config.get('dbpassword') or self.system.get('password')
+                    ),
+                    'name': self.config.get('dbase_name')
+                }
+            except Exception as e:
+                self.logger.error(str(e))
+  
+    def get_user_info_from_username(self, username):
+        if username == None:
+            return
+        if self.username_cache.get(username) == None:
+            user_info = self.run_query('SELECT * FROM users WHERE user_name=?',
+                                        username,{'fetch': 'row_hashref'})
+            if (user_info and user_info.get('user_db')) != None:
+                remote_user = self.get_remote_user_info(username, 
+                                        user_info.get('user_db'))
+                if (remote_user.get('user_name') != None):
+                    for att in ['first_name', 'surname', 'email', 
+                        'affiliation', 'submission_digests', 
+                        'submission_email_cc', 'absent_until']:
+                        if remote_user.get(att):
+                            user_info[att] = remote_user.get(att)
+            self.username_cache[username] = user_info
+        return self.username_cache.get(username)
+    
+    def get_remote_user_info(self, username, user_db_id):
+        user_db = self.get_user_db(user_db_id)
+        user_data = self.run_query(
+            'SELECT user_name,first_name,surname,email,affiliation '
+            'FROM users WHERE user_name=?',
+            username,{'db':user_db,'fetch':'row_hashref'})
+        user_prefs = self.run_query(
+            'SELECT * FROM curator_prefs WHERE user_name=?',
+            username,{'db': user_db,'fetch': 'row_hashref'})
+        for key in user_prefs.keys():
+            user_data[key] = user_prefs[key]
+        return user_data
+    
+    def get_user_db(self,id):
+        try:
+            return self.user_dbs[id]['db']
+        except:
+            self.logger.error('Cannot get user db')
+               
+    def get_eav_fields(self):
+        return self.run_query( 
+            'SELECT * FROM eav_fields ORDER BY field_order,field',  
+                None, { 'fetch' : 'all_arrayref', 'slice' : {} })
+    
+    def get_eav_fieldnames(self, options={}):        
+        no_curate = ' WHERE NOT no_curate' if options.get('curate') else ''
+        return self.run_query(
+            f'SELECT field FROM eav_fields{no_curate} ORDER BY '
+            'field_order,field',
+                None, { 'fetch': 'col_arrayref' })
 
     
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses

@@ -21,15 +21,18 @@
 # This script is used to generate a list of BIGSdb Python plugins that can be
 # read by the BIGSdb program.
 # Run the script and save the output as python_plugins.json in the 
-#/etc/bigsdb/ directory.
+# /etc/bigsdb/ directory.
 
-#Version 20240721
+# Version 20240722
 
 import os
+import sys
 import argparse
 import importlib.util
 import inspect
 import json
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--plugin_dir', required=True, help='Plugin directory')
@@ -50,18 +53,28 @@ def main():
         # Load the module
         spec.loader.exec_module(module)
         
-        # Get the name of the plugin class in the module
-        class_name = [name for name, obj in inspect.getmembers(module) if inspect.isclass(obj)][0]
-        
-        # If the module has the class
+        class_name = module_file.replace('.py', '')
+         # If the module has the class
         if hasattr(module, class_name):
             # Create an instance of the class
-            instance = getattr(module, class_name)()
+            instance = getattr(module, class_name)(retrieving_attributes=True)
 
             # If the instance has the method
+            attributes = {}
             if hasattr(instance, 'get_attributes'):
-                 results.append(instance.get_attributes())
-    
+                 attributes = instance.get_attributes()
+                 
+            if hasattr(instance, 'get_plugin_javascript'):
+                js = instance.get_plugin_javascript()
+                if js != None and len(js):
+                    attributes['javascript'] = js
+                    
+            if hasattr(instance, 'get_initiation_values'):
+                init = instance.get_initiation_values()
+                if init != None and len(init):
+                    attributes['init'] = init
+                    
+            results.append(attributes)
     print(json.dumps(results))
 
 

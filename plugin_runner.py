@@ -18,47 +18,35 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
-from datetime import datetime
+import argparse
+import importlib
+import sys
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--database', required=True, help='Database config')
+parser.add_argument('--module', required=True, help='Plugin module name')
+parser.add_argument('--module_dir', required=True, help='Plugin module directory')
+parser.add_argument('--arg_file', required=False, help='Argument JSON file')
+parser.add_argument('--run_job', type=bool, default=False)
+args = parser.parse_args()
+
+sys.path.insert(0, args.module_dir)
 
 
-def get_datestamp():
-	return datetime.today().strftime('%Y-%m-%d')
+def main():
+    module = importlib.import_module(args.module)
+    plugin = getattr(module, args.module)(
+        database=args.database,
+        arg_file=args.arg_file
+    )
+    if args.run_job:
+        plugin.run_job()
+    else:
+        plugin.run()
+
+if __name__ == "__main__":
+    main()
 
 
-def get_current_year():
-	return datetime.today().strftime('%Y')
 
-
-def is_integer(n):
-    try:
-        int(n)
-        return True
-    except ValueError:
-        return False
-
-       
-def is_float(n):
-    try:
-        float(n)
-        return True
-    except ValueError:
-        return False
-
-
-def is_date(string, format="%Y-%m-%d"):
-    try:
-        datetime.strptime(string, format)
-        return True
-    except ValueError:
-        return False
-
-    
-def escape_html(string):
-	if string == None:
-		return
-	string.replace('&', '&amp;')
-	string.replace('"', '&quot;')
-	string.replace('<', '&lt;')
-	string.replace('>', '&gt;')
-	return string
-	
