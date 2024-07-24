@@ -23,16 +23,13 @@
 # Run the script and save the output as python_plugins.json in the 
 # /etc/bigsdb/ directory.
 
-# Version 20240722
+# Version 20240723
 
 import os
-import sys
 import argparse
 import importlib.util
 import inspect
 import json
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--plugin_dir', required=True, help='Plugin directory')

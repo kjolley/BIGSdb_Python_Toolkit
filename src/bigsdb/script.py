@@ -31,8 +31,8 @@ class Script(BaseApplication):
         self.__init_logger(logger=logger)
  
         super(Script, self).__init__(database=database, config_dir=config_dir,
-                 dbase_config_dir=dbase_config_dir, host=host, port=port, user=user,
-                 password=password, logger=self.logger)
+                 dbase_config_dir=dbase_config_dir, host=host, port=port, 
+                 user=user, password=password, logger=self.logger)
         
     def __init_logger(self,logger=None):
         if logger:

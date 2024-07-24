@@ -22,8 +22,6 @@ import sys
 import os
 import pathlib
 import bigsdb.utils
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from bigsdb.plugin import Plugin
 
 HIDE_VALUES = 8

@@ -32,7 +32,7 @@ parser.add_argument('--run_job', type=bool, default=False)
 args = parser.parse_args()
 
 sys.path.insert(0, args.module_dir)
-
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 
 def main():
     module = importlib.import_module(args.module)
