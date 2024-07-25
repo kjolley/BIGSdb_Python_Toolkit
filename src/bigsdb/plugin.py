@@ -19,7 +19,6 @@
 # see <https://www.gnu.org/licenses/>.
 
 import logging
-import cgi
 import os
 import json
 from bigsdb.base_application import BaseApplication
@@ -33,7 +32,7 @@ class Plugin(BaseApplication):
                  retrieving_attributes=False):
         if not retrieving_attributes:
             if database == None:
-                raise ValueError('No database parameter passed.')
+                raise ValueError('No database parameter passed.')            
         self.__init_logger()
         super(Plugin, self).__init__(database=database, config_dir=config_dir,
             dbase_config_dir=dbase_config_dir, logger=self.logger,
@@ -70,7 +69,7 @@ class Plugin(BaseApplication):
         self.logger.addHandler(f_handler)
     
     def __initiate(self):
-        form = cgi.FieldStorage()
+        self.params = self.args.get('cgi_params')
         self.script_name = os.environ.get('SCRIPT_NAME', '') or 'bigsdb.pl'
 
     def __read_arg_file(self, arg_file):

@@ -37,12 +37,12 @@ class BaseApplication(object):
         self.config_dir = config_dir
         self.dbase_config_dir = dbase_config_dir
         self.logger = logger
+        self.config = self.__read_config_file()
         if testing:
             return
         if database == None:
             raise ValueError('No database parameter passed.')
-        self.instance = database
-        self.config = self.__read_config_file()
+        self.instance = database       
         self.__read_db_config_file()
         self.__read_host_mapping_file()
         self.__read_dbase_config_xml_file()

@@ -18,9 +18,6 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
-import sys
-import os
-import pathlib
 import bigsdb.utils
 from bigsdb.plugin import Plugin
 
