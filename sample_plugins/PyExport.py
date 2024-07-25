@@ -1,0 +1,84 @@
+# Written by Keith Jolley
+# Copyright (c) 2024, University of Oxford
+# E-mail: keith.jolley@biology.ox.ac.uk
+#
+# This file is part of BIGSdb Python Toolkit.
+#
+# BIGSdb Python Toolkit is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# BIGSdb Python Toolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with BIGSdb Python Toolkit. If not, 
+# see <https://www.gnu.org/licenses/>.
+
+import bigsdb.utils
+from bigsdb.plugin import Plugin
+
+
+class PyExport(Plugin):
+
+    def get_attributes(self):
+        return {
+            'name': 'Export (PYTHON TEST)',
+            'authors': [
+                {
+                    'name': 'Keith Jolley',
+                    'affiliation': 'University of Oxford, UK',
+                    'email': 'keith.jolley@biology.ox.ac.uk',
+                }
+            ],
+            'description': 'Export dataset generated from query results',
+            'full_description': 'The Export plugin creates a download file '
+            'of any primary metadata, secondary metadata, allele designations, '
+            'scheme designations, or publications for isolates within a '
+            'selected dataset or for the whole database. The output file is '
+            'in Excel format.',
+            'category': 'Export',
+            'menutext': 'Dataset (Python test)',
+            'module': 'PyExport',
+            'version': '1.0.0',
+            'section': 'export,postquery',
+            'url': '{0}/data_export/isolate_export.html'.format(self.config.get('doclink')),
+            'input': 'query',
+            'requires': 'ref_db,js_tree,offline_jobs',
+            'help': 'tooltips',
+            'order': 15,
+            'dbtype': 'isolates',
+            'image': None,
+            'system_flag': 'DatasetExport',
+            'enabled_by_default': 1
+        }
+        
+    def run(self):
+        print('<h1>Export dataset</h1>')
+        if self.system.get('DatasetExport','' ) == 'no':
+            self.print_bad_status( {'message' : 'Dataset exports are disabled.' } )
+            return
+        if self.has_set_changed():
+            return
+        if self.params.get('submit'):
+            pass    #TODO Complete action
+        self.__print_interface()
+        
+    
+        
+        
+    def __print_interface(self):
+        set_id = self.get_set_id()
+        query_file = self.params.get('query_file')
+        if self.params.get('isolate_id'):
+            selected_ids = self.params.get('isolate_id')
+        elif query_file != None:
+            qry = self.get_query(query_file)
+            selected_ids = self.get_ids_from_query(qry)
+        else:
+            selected_ids = []
+
+        self.logger.error(selected_ids)

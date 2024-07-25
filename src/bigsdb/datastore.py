@@ -21,6 +21,7 @@
 import re
 import logging
 import psycopg2.extras
+import bigsdb.utils
 
 
 class Datastore(object):
@@ -147,7 +148,109 @@ class Datastore(object):
             f'SELECT field FROM eav_fields{no_curate} ORDER BY '
             'field_order,field',
                 None, { 'fetch': 'col_arrayref' })
-
+        
+    def initiate_view(self,username=None, curate=False, set_id=None):
+        user_info = self.get_user_info_from_username(username)
+        if self.system.get('dbtype','') == 'sequences':
+            if user_info == None:   #Not logged in.
+                pass #TODO Add date restriction
+            self.system['temp_sequences_view'] = \
+                self.system.get('temp_sequences_view','sequences')
+        if self.system.get('dbtype','') != 'isolates': 
+            return
+        if self.system.get('view') and set_id:
+            if self.system.get('views') and bigsdb.utils.is_integer(set_id):
+                set_view = self.run_query(
+                    'SELECT view FROM set_view WHERE set_id=?', set_id)
+                if set_view:
+                    self.system['view'] = set_view
+                    
+        view = self.system.get('view')
+        qry = (f'CREATE TEMPORARY VIEW temp_view AS SELECT v.* FROM {view} v LEFT '
+         + 'JOIN private_isolates p ON v.id=p.isolate_id WHERE ')
+        OWN_SUBMITTED_ISOLATES               = 'v.sender=?'
+        OWN_PRIVATE_ISOLATES                 = 'p.user_id=?'
+        PUBLIC_ISOLATES_FROM_SAME_USER_GROUP = ('(EXISTS(SELECT 1 FROM '
+        + 'user_group_members ugm JOIN user_groups ug ON ugm.user_group=ug.id '
+        + 'WHERE ug.co_curate AND ugm.user_id=v.sender AND EXISTS(SELECT 1 '
+        + 'FROM user_group_members WHERE (user_group,user_id)=(ug.id,?))) '
+        + 'AND p.user_id IS NULL)')
+        PRIVATE_ISOLATES_FROM_SAME_USER_GROUP = ('(EXISTS(SELECT 1 FROM '
+        + 'user_group_members ugm JOIN user_groups ug ON ugm.user_group=ug.id '
+        + 'WHERE ug.co_curate_private AND ugm.user_id=v.sender AND '
+        + 'EXISTS(SELECT 1 FROM user_group_members WHERE (user_group,user_id)='
+        + '(ug.id,?))) AND p.user_id IS NOT NULL)')
+        EMBARGOED_ISOLATES = 'p.embargo IS NOT NULL'
+        PUBLIC_ISOLATES = 'p.user_id IS NULL'
+        ISOLATES_FROM_USER_PROJECT = ('EXISTS(SELECT 1 FROM project_members pm '
+        + 'JOIN merged_project_users mpu ON pm.project_id=mpu.project_id WHERE '
+        + '(mpu.user_id,pm.isolate_id)=(?,v.id))')
+        PUBLICATION_REQUESTED = 'p.request_publish'
+        PUBLICATION_REQUESTED = 'p.request_publish'
+        ALL_ISOLATES          = 'EXISTS(SELECT 1)'
+        
+        if user_info == None:
+            qry += PUBLIC_ISOLATES
+            #TODO Add date restriction
+        else:
+            user_terms = []
+            has_user_project = self.run_query( 
+                'SELECT EXISTS(SELECT * FROM merged_project_users WHERE user_id=?)', 
+                user_info.get('id') )
+            if curate:
+                status = user_info.get('status')
+                def admin():
+                    return [ALL_ISOLATES]
+                def submitter():
+                    return [OWN_SUBMITTED_ISOLATES, OWN_PRIVATE_ISOLATES,
+                        PUBLIC_ISOLATES_FROM_SAME_USER_GROUP,
+                        PRIVATE_ISOLATES_FROM_SAME_USER_GROUP]
+                def private_submitter():
+                    return [ OWN_PRIVATE_ISOLATES, 
+                                   PRIVATE_ISOLATES_FROM_SAME_USER_GROUP ]
+                def curator():
+                    user_terms = [ PUBLIC_ISOLATES, OWN_PRIVATE_ISOLATES, 
+                                   EMBARGOED_ISOLATES, PUBLICATION_REQUESTED ]
+                    if has_user_project:
+                        user_terms.push(ISOLATES_FROM_USER_PROJECT)
+                    return user_terms
+                dispatch_table = {
+                    'admin': admin,
+                    'submitter': submitter,
+                    'private_submitter': private_submitter,
+                    'curator': curator
+                }
+                if status == 'submitter':
+                    only_private = self.run_query( 'SELECT EXISTS(SELECT * '
+                        'FROM permissions WHERE (user_id,permission)=(?,?))', 
+                    [ user_info.get('id'), 'only_private' ] )
+                    if only_private:
+                        status='private_submitter'
+                action = dispatch_table.get(status)
+                user_terms = action()
+            else:
+                user_terms = (PUBLIC_ISOLATES)
+                #Simplify view definition by only looking for private/project 
+                #isolates if the user has any.
+                has_private_isolates = self.run_query( 'SELECT EXISTS(SELECT '
+                    '* FROM private_isolates WHERE user_id=?)', user_info.get('id') );
+                if (has_private_isolates):
+                    user_terms.push(OWN_PRIVATE_ISOLATES)
+                if (has_user_project):
+                    user_terms.push(ISOLATES_FROM_USER_PROJECT)
+        qry += ' OR '.join(user_terms)
+        user_term_count = qry.count('?')
+        args = [user_info.get('id')] * user_term_count
+        qry = replace_placeholders(qry)
+        try:
+            cursor = self.db.cursor()
+            cursor.execute(qry, args)
+            self.db.commit()
+        except Exception as e:
+            self.logger.error(e)
+            self.db.rollback()
+        self.system['view'] = 'temp_view'   
+                    
     
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.
