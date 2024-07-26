@@ -26,6 +26,8 @@ import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.constants import DIRS
 
+MAX_ISOLATES_DROPDOWN = 1000
+
 
 class Plugin(BaseApplication):
 
@@ -146,7 +148,7 @@ class Plugin(BaseApplication):
                 if len(self.cache.get('set_list',[])):
                     return self.cache.get('set_list')
     
-    def get_query(self, query_file):
+    def __get_query(self, query_file):
         view = self.system.get('view')    #TODO Will need to initiate view  
         if query_file == None:
             qry = f'SELECT * FROM {view} WHERE new_version IS NULL ORDER BY id'
@@ -176,7 +178,7 @@ class Plugin(BaseApplication):
             qry = re.sub(r'([\s\(])date_entered', r'\1view.date_entered', qry)
         return qry
     
-    def get_ids_from_query(self, qry):
+    def __get_ids_from_query(self, qry):
         if qry == None:
             return []
         qry = re.sub(r'ORDER\sBY.*$', '', qry)
@@ -186,4 +188,91 @@ class Plugin(BaseApplication):
         qry += f' ORDER BY {view}.id'
         ids = self.datastore.run_query(qry,None,{'fetch':'col_arrayref'})
         return ids
+    
+    def get_selected_ids(self):
+        query_file = self.params.get('query_file')
+        if self.params.get('isolate_id'):
+            selected_ids = self.params.get('isolate_id')
+        elif query_file != None:
+            qry = self.__get_query(query_file)
+            selected_ids = self.__get_ids_from_query(qry)
+        else:
+            selected_ids = []
+        return selected_ids
+    
+    def print_seqbin_isolate_fieldset(self, options):
+        seqbin_count = self.datastore.get_seqbin_count()
+        print('<fieldset style="float:left"><legend>Isolates</legend>')
+        if seqbin_count or options.get('use_all'):
+            size = options.get('size', 8)
+            list_box_size = size - 0.2
+            print('<div style="float:left">')
+            if (seqbin_count <= MAX_ISOLATES_DROPDOWN and not options['use_all']) \
+            or not options['isolate_paste_list']:
+                selected_ids = set(options.get('selected_ids', []))
+                self.logger.error(selected_ids)
+                ids, labels = self.datastore.get_isolates_with_seqbin(options)
+                print('<select name="isolate_id" id="isolate_id" '
+                      f'style="min-width:12em;height:{size}em" multiple>')
+                for id in ids:
+                    selected = ' selected' if id in selected_ids else ''
+                    label = labels.get(id,id)
+                    print(f'<option value="{id}"{selected}>{label}</option>')
+                print('</select>')
+                list_button = ''
+                if options['isolate_paste_list']:
+                    show_button_display = 'none' \
+                        if self.params.get('isolate_paste_list') else 'display'
+                    hide_button_display = 'display' \
+                        if self.params.get('isolate_paste_list') else 'none'
+                    list_button = ('<input type="button" id="isolate_list_show_button" '
+                    'onclick="isolate_list_show()" value="Paste list" '
+                    f'style="margin:1em 0 0 0.2em; display:{show_button_display}" '
+                    'class="small_submit" />')
+                    list_button += ('<input type="button" '
+                    'id="isolate_list_hide_button" onclick="isolate_list_hide()" '
+                    'value="Hide list" style="margin:1em 0 0 0.2em; '
+                    f'display:{hide_button_display}" class="small_submit" />')
+                print('<div style="text-align:center">'
+                      '<input type="button" onclick="listbox_selectall(\'isolate_id\',true)" '
+                      'value="All" style="margin-top:1em" class="small_submit" />')
+                print('<input type="button" onclick="listbox_selectall(\'isolate_id\',false)" '
+                      'value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
+                      f'{list_button}</div></div>')
+                if options['isolate_paste_list']:
+                    display = 'block' if self.params.get('isolate_paste_list') \
+                    else 'none'
+                    print('<div id="isolate_paste_list_div" style="float:left; '
+                          f'display:{display}">')
+                    print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
+                          f'style="height:{list_box_size}em" '
+                          'placeholder="Paste list of isolate ids (one per line)...">'
+                          '</textarea>')
+                    print('</div>')
+            else:
+                print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
+                      f'style="height:{list_box_size}em" '
+                      'placeholder="Paste list of isolate ids (one per line)...">')
+                self.logger.error(options.get('selected_ids'))
+                print('\n'.join(map(str,options.get('selected_ids'))))
+                print('</textarea>')
+                print('<div style="text-align:center"><input type="button" '
+                      'onclick="listbox_clear(\'isolate_paste_list\')" '
+                      'value="Clear" style="margin-top:1em" class="small_submit" />')
+                if options.get('only_genomes'):
+                    print('<input type="button" '
+                          'onclick="listbox_listgenomes(\'isolate_paste_list\')" '
+                          'value="List all" style="margin-top:1em" '
+                          'class="small_submit" /></div></div>')
+                else:
+                    print('<input type="button" '
+                          'onclick="listbox_listall(\'isolate_paste_list\')" '
+                          'value="List all" style="margin-top:1em" '
+                          'class="small_submit" /></div></div>')
+            print('<div>')
+        else:
+            print('No isolates available<br />for analysis')
+            
+        print('</fieldset>')
+
 

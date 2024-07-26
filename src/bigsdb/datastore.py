@@ -21,6 +21,7 @@
 import re
 import logging
 import psycopg2.extras
+import random
 import bigsdb.utils
 
 
@@ -39,6 +40,7 @@ class Datastore(object):
         self.logger = logger
         self.curate = curate
         self.username_cache = {}
+        self.cache = {}
         self.user_dbs = {}
         
     def run_query(self, qry, values=[], options={}):
@@ -64,7 +66,11 @@ class Datastore(object):
 
         # No differentiation between Perl DBI row_array and row_arrayref in Python.
         if fetch == 'row_arrayref' or fetch == 'row_array':
-            return cursor.fetchone()
+            value = cursor.fetchone()
+            if len(value) == 1:
+                return value[0]
+            else:
+                return value
         if fetch == 'row_hashref':
             return dict(cursor.fetchone())
         if fetch == 'all_hashref':
@@ -199,26 +205,26 @@ class Datastore(object):
                 user_info.get('id') )
             if curate:
                 status = user_info.get('status')
-                def admin():
+                def __admin():
                     return [ALL_ISOLATES]
-                def submitter():
+                def __submitter():
                     return [OWN_SUBMITTED_ISOLATES, OWN_PRIVATE_ISOLATES,
                         PUBLIC_ISOLATES_FROM_SAME_USER_GROUP,
                         PRIVATE_ISOLATES_FROM_SAME_USER_GROUP]
-                def private_submitter():
+                def __private_submitter():
                     return [ OWN_PRIVATE_ISOLATES, 
                                    PRIVATE_ISOLATES_FROM_SAME_USER_GROUP ]
-                def curator():
+                def __curator():
                     user_terms = [ PUBLIC_ISOLATES, OWN_PRIVATE_ISOLATES, 
                                    EMBARGOED_ISOLATES, PUBLICATION_REQUESTED ]
                     if has_user_project:
-                        user_terms.push(ISOLATES_FROM_USER_PROJECT)
+                        user_terms.append(ISOLATES_FROM_USER_PROJECT)
                     return user_terms
                 dispatch_table = {
-                    'admin': admin,
-                    'submitter': submitter,
-                    'private_submitter': private_submitter,
-                    'curator': curator
+                    'admin': __admin,
+                    'submitter': __submitter,
+                    'private_submitter': __private_submitter,
+                    'curator': __curator
                 }
                 if status == 'submitter':
                     only_private = self.run_query( 'SELECT EXISTS(SELECT * '
@@ -229,16 +235,18 @@ class Datastore(object):
                 action = dispatch_table.get(status)
                 user_terms = action()
             else:
-                user_terms = (PUBLIC_ISOLATES)
+                user_terms = [PUBLIC_ISOLATES]
                 #Simplify view definition by only looking for private/project 
                 #isolates if the user has any.
                 has_private_isolates = self.run_query( 'SELECT EXISTS(SELECT '
                     '* FROM private_isolates WHERE user_id=?)', user_info.get('id') );
                 if (has_private_isolates):
-                    user_terms.push(OWN_PRIVATE_ISOLATES)
+                    user_terms.append(OWN_PRIVATE_ISOLATES)
+                    
                 if (has_user_project):
-                    user_terms.push(ISOLATES_FROM_USER_PROJECT)
+                    user_terms.append(ISOLATES_FROM_USER_PROJECT)
         qry += ' OR '.join(user_terms)
+        
         user_term_count = qry.count('?')
         args = [user_info.get('id')] * user_term_count
         qry = replace_placeholders(qry)
@@ -249,8 +257,41 @@ class Datastore(object):
         except Exception as e:
             self.logger.error(e)
             self.db.rollback()
-        self.system['view'] = 'temp_view'   
-                    
+        self.system['view'] = 'temp_view'  
+        
+    def get_seqbin_count(self):
+        if self.cache.get('seqbin_count') != None:
+            return self.cache.get('seqbin_count')
+        view = self.system.get('view')
+        self.cache['seqbin_count'] = self.run_query('SELECT COUNT(*) FROM '
+            f'{view} v JOIN seqbin_stats s ON v.id=s.isolate_id')
+        return self.cache.get('seqbin_count')
+    
+    def get_isolates_with_seqbin(self,options):
+        view = self.system.get('view')
+        labelfield = self.system.get('labelfield')
+        if options.get('id_list'):
+            raise NotImplementedError
+        elif options.get('use_all'):
+            qry = (f'SELECT {view}.id,{view}.{labelfield},new_version '
+                f'FROM {view} ORDER BY {view}.id')
+        else:
+            qry = (f'SELECT {view}.id,{view}.{labelfield},new_version FROM '
+                f'{view} WHERE EXISTS (SELECT * FROM seqbin_stats WHERE '
+                f'{view}.id=seqbin_stats.isolate_id) ORDER BY {view}.id')
+        data = self.run_query(qry, None, { 'fetch' : 'all_arrayref' })
+        ids = []
+        labels = {}
+        for record in data:
+            id, isolate, new_version = record
+            if isolate is None: # One database on PubMLST uses a restricted view that hides some isolate names.
+                isolate = ''
+            ids.append(id)
+            labels[id] = f'{id}) {isolate} [old version]' if new_version else f'{id}) {isolate}'
+        return ids, labels
+       
+
+
     
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.

@@ -18,6 +18,7 @@
 # along with BIGSdb Python Toolkit. If not, 
 # see <https://www.gnu.org/licenses/>.
 
+import os
 import bigsdb.utils
 from bigsdb.plugin import Plugin
 
@@ -72,13 +73,24 @@ class PyExport(Plugin):
         
     def __print_interface(self):
         set_id = self.get_set_id()
-        query_file = self.params.get('query_file')
-        if self.params.get('isolate_id'):
-            selected_ids = self.params.get('isolate_id')
-        elif query_file != None:
-            qry = self.get_query(query_file)
-            selected_ids = self.get_ids_from_query(qry)
-        else:
-            selected_ids = []
-
-        self.logger.error(selected_ids)
+        selected_ids = self.get_selected_ids()
+        print('<div class="box" id="queryform"><div class="scrollable">'
+            'This script will export the dataset in tab-delimited text and '
+            'Excel formats. Select which fields you would like included. '
+            'Select loci either from the locus list or by selecting one or '
+            'more schemes to include all loci (and/or fields) from a scheme.'
+            '</p>')
+        #TODO start form
+        self.print_seqbin_isolate_fieldset({ 
+            'use_all' : 1, 
+            'selected_ids' : selected_ids, 
+            'isolate_paste_list' : 1 ,
+         })
+        
+        print('</div></div>')
+        
+     
+        
+        
+        
+        
