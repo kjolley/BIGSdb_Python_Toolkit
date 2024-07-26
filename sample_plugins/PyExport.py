@@ -59,17 +59,14 @@ class PyExport(Plugin):
         
     def run(self):
         print('<h1>Export dataset</h1>')
-        if self.system.get('DatasetExport','' ) == 'no':
-            self.print_bad_status( {'message' : 'Dataset exports are disabled.' } )
+        if self.system.get('DatasetExport', '') == 'no':
+            self.print_bad_status({'message': 'Dataset exports are disabled.' })
             return
         if self.has_set_changed():
             return
         if self.params.get('submit'):
-            pass    #TODO Complete action
+            pass  # TODO Complete action
         self.__print_interface()
-        
-    
-        
         
     def __print_interface(self):
         set_id = self.get_set_id()
@@ -80,17 +77,15 @@ class PyExport(Plugin):
             'Select loci either from the locus list or by selecting one or '
             'more schemes to include all loci (and/or fields) from a scheme.'
             '</p>')
-        #TODO start form
+        self.start_form()
+        # TODO start form
         self.print_seqbin_isolate_fieldset({ 
-            'use_all' : 1, 
-            'selected_ids' : selected_ids, 
-            'isolate_paste_list' : 1 ,
+            'use_all': 1,
+            'selected_ids': selected_ids,
+            'isolate_paste_list': 1 ,
          })
-        
+        self.print_action_fieldset({ 'no_reset': 1 });
+        self.print_hidden(['db', 'page', 'name', 'set_id'])
+        self.end_form()
         print('</div></div>')
-        
-     
-        
-        
-        
         

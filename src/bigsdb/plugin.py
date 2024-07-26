@@ -76,10 +76,10 @@ class Plugin(BaseApplication):
     def __initiate(self):
         self.params = self.args.get('cgi_params')
         self.script_name = os.environ.get('SCRIPT_NAME', '') or 'bigsdb.pl'
-        if self.system.get('dbtype','') == 'isolates':
+        if self.system.get('dbtype', '') == 'isolates':
             self.datastore.initiate_view(
-                username=self.args.get('username'), 
-                curate=self.args.get('curate', False), 
+                username=self.args.get('username'),
+                curate=self.args.get('curate', False),
                 set_id=self.get_set_id()
             )
 
@@ -110,11 +110,11 @@ class Plugin(BaseApplication):
                 if name == group:
                     return icon
                 
-    def print_bad_status(self,options):
+    def print_bad_status(self, options):
         
         options['message'] = options.get('message', 'Failed!')
         buffer = ('<div class="box statusbad" style="min-height:5em"><p>' + 
-        '<span class="failure fas fa-times fa-5x fa-pull-left"></span>' +
+        '<span class="failure fas fa-times fa-5x fa-pull-left"></span>' + 
         '</p><p class="outcome_message">{0}</p>'.format(options.get('message')))
         if options.get('detail'):
             buffer += '<p class="outcome_detail">{0}</p>' \
@@ -144,12 +144,12 @@ class Plugin(BaseApplication):
                 if not self.cache.get('set_list'):
                   self.cache['set_list'] = self.datastore.run_query(
                       'SELECT id FROM sets ORDER BY display_order,description',
-                      None, {'fetch' : 'col_arrayref'})  
-                if len(self.cache.get('set_list',[])):
+                      None, {'fetch': 'col_arrayref'})  
+                if len(self.cache.get('set_list', [])):
                     return self.cache.get('set_list')
     
     def __get_query(self, query_file):
-        view = self.system.get('view')    #TODO Will need to initiate view  
+        view = self.system.get('view')  # TODO Will need to initiate view  
         if query_file == None:
             qry = f'SELECT * FROM {view} WHERE new_version IS NULL ORDER BY id'
         else:
@@ -158,19 +158,19 @@ class Plugin(BaseApplication):
                 try:
                     with open(full_path) as x: qry = x.read()
                 except IOError:
-                    if self.params.get('format','') == 'text':
+                    if self.params.get('format', '') == 'text':
                         print('Cannot open temporary file.')
                     else:
-                       self.print_bad_status( 
-                           { 'message' : 'Cannot open temporary file.' })
+                       self.print_bad_status(
+                           { 'message': 'Cannot open temporary file.' })
                     self.logger.error(f'Cannot open temporary file {full_path}')
                     return
             else:
-                if self.params.get('format','') == 'text':
+                if self.params.get('format', '') == 'text':
                     print('The temporary file containing your query does '
                           'not exist. Please repeat your query.')
                 else:
-                    self.print_bad_status( { 'message' : 
+                    self.print_bad_status({ 'message': 
                         'The temporary file containing your query does '
                         'not exist. Please repeat your query.' })
         if self.system.get('dbtype', '') == 'isolates':
@@ -186,7 +186,7 @@ class Plugin(BaseApplication):
         view = self.system.get('view')
         qry = re.sub(r'SELECT\s(view\.\*|\*)', 'SELECT id', qry)
         qry += f' ORDER BY {view}.id'
-        ids = self.datastore.run_query(qry,None,{'fetch':'col_arrayref'})
+        ids = self.datastore.run_query(qry, None, {'fetch':'col_arrayref'})
         return ids
     
     def get_selected_ids(self):
@@ -209,14 +209,17 @@ class Plugin(BaseApplication):
             print('<div style="float:left">')
             if (seqbin_count <= MAX_ISOLATES_DROPDOWN and not options['use_all']) \
             or not options['isolate_paste_list']:
-                selected_ids = set(options.get('selected_ids', []))
-                self.logger.error(selected_ids)
+                default = self.params.get('isolate_id')
+                if default:
+                    selected_ids = {int(x) for x in default.split("\u0000")}
+                else:
+                    selected_ids = set(options.get('selected_ids', []))
                 ids, labels = self.datastore.get_isolates_with_seqbin(options)
                 print('<select name="isolate_id" id="isolate_id" '
                       f'style="min-width:12em;height:{size}em" multiple>')
                 for id in ids:
                     selected = ' selected' if id in selected_ids else ''
-                    label = labels.get(id,id)
+                    label = labels.get(id, id)
                     print(f'<option value="{id}"{selected}>{label}</option>')
                 print('</select>')
                 list_button = ''
@@ -248,13 +251,15 @@ class Plugin(BaseApplication):
                           f'style="height:{list_box_size}em" '
                           'placeholder="Paste list of isolate ids (one per line)...">'
                           '</textarea>')
-                    print('</div>')
             else:
+                default = self.params.get('isolate_paste_list','')
                 print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
                       f'style="height:{list_box_size}em" '
                       'placeholder="Paste list of isolate ids (one per line)...">')
-                self.logger.error(options.get('selected_ids'))
-                print('\n'.join(map(str,options.get('selected_ids'))))
+                if default:
+                    print(default, end='')
+                else:
+                    print('\n'.join(map(str, options.get('selected_ids'))), end='')
                 print('</textarea>')
                 print('<div style="text-align:center"><input type="button" '
                       'onclick="listbox_clear(\'isolate_paste_list\')" '
@@ -263,16 +268,69 @@ class Plugin(BaseApplication):
                     print('<input type="button" '
                           'onclick="listbox_listgenomes(\'isolate_paste_list\')" '
                           'value="List all" style="margin-top:1em" '
-                          'class="small_submit" /></div></div>')
+                          'class="small_submit" /></div>')
                 else:
                     print('<input type="button" '
                           'onclick="listbox_listall(\'isolate_paste_list\')" '
                           'value="List all" style="margin-top:1em" '
-                          'class="small_submit" /></div></div>')
-            print('<div>')
+                          'class="small_submit" /></div>')
+            print('</div>')
         else:
-            print('No isolates available<br />for analysis')
-            
+            print('No isolates available<br />for analysis')            
         print('</fieldset>')
 
-
+    def print_action_fieldset(self, options=None):
+        if options is None:
+            options = {}
+        page = options.get('page', self.params.get('page'))
+        submit_name = options.get('submit_name', 'submit')
+        submit_label = options.get('submit_label', 'Submit')
+        reset_label = options.get('reset_label', 'Reset')
+        legend = options.get('legend', 'Action')
+        buffer = f'<fieldset style="float:left"><legend>{legend}</legend>\n'
+        if 'text' in options:
+            buffer += options['text'] 
+        url = '{0}?db={1}&amp;page={2}'.format(self.script_name, self.instance, page)
+        fields = ['isolate_id', 'id', 'scheme_id', 'table', 'name', 'ruleset',
+                   'locus', 'profile_id', 'simple', 'set_id', 'modify',
+                   'project_id', 'edit', 'private', 'user_header', 'interface']
+    
+        if 'table' in options:
+            raise NotImplementedError  # TODO datastore.get_table_pks
+            pk_fields = self.datastore.get_table_pks(options['table'])
+            fields.extend(pk_fields)
+        for field in set(fields):
+            if field in options:
+                url += f"&amp;{field}={options[field]}"
+        if not options.get('no_reset'):
+            buffer += f'<a href="{url}" class="reset"><span>{reset_label}</span></a>\n'
+        id = {'id': options['id']} if 'id' in options else {}
+        buffer += (f'<input type="submit" id="{submit_name}" name="{submit_name}" '
+                   f'value="{submit_label}" class="submit" {id}>\n')
+        if 'submit2' in options:
+            options['submit2_label'] = options.get('submit2_label',
+                                                   options['submit2'])
+            buffer += (f'<input type="submit" name="{options["submit2"]}" '
+                       f'value="{options["submit2_label"]}" class="submit" '
+                       'style="margin-left:0.2em">\n')
+        buffer += '</fieldset>'
+        if not options.get('no_clear'):
+            buffer += '<div style="clear:both"></div>'
+        if options.get('get_only'):
+            return buffer
+        print(buffer)
+        
+    def start_form(self):
+        print(f'<form method="post" action="{self.script_name}" enctype="multipart/form-data">')
+        
+    def print_hidden(self, param_list):
+        for param in param_list:
+            if self.params.get(param):
+                value = self.params.get(param)
+                print(f'<input type="hidden" name="{param}" value="{value}" />')
+                
+    def end_form(self):
+        print('</form>')
+        
+            
+            
