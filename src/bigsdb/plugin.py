@@ -245,12 +245,13 @@ class Plugin(BaseApplication):
                 if options['isolate_paste_list']:
                     display = 'block' if self.params.get('isolate_paste_list') \
                     else 'none'
+                    default = self.params.get('isolate_paste_list','')
                     print('<div id="isolate_paste_list_div" style="float:left; '
                           f'display:{display}">')
                     print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
                           f'style="height:{list_box_size}em" '
                           'placeholder="Paste list of isolate ids (one per line)...">'
-                          '</textarea>')
+                          f'{default}</textarea>')
             else:
                 default = self.params.get('isolate_paste_list','')
                 print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
@@ -332,5 +333,26 @@ class Plugin(BaseApplication):
     def end_form(self):
         print('</form>')
         
-            
-            
+    def filter_list_to_ids(self, list=[]):   
+        returned_list = []
+        for value in list:
+            if bisdb.utils.is_integer(value):
+                returned_list.append(value)
+        return returned_list
+
+    def get_ids_from_pasted_list(self):
+        cleaned_ids = []
+        invalid_ids = []
+        if self.params.get('isolate_paste_list'):
+            list = self.params.get('isolate_paste_list').split('\n')
+            for id in list:
+                id = id.strip()
+                if bigsdb.utils.is_integer(id) and self.datastore.isolate_exists(id):
+                    cleaned_ids.append(int(id))
+                else:
+                    if bigsdb.utils.is_integer(id):
+                        invalid_ids.append(int(id))
+                    else:
+                        invalid_ids.append(id)
+        return cleaned_ids, invalid_ids
+        

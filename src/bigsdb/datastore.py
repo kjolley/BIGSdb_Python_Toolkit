@@ -290,7 +290,9 @@ class Datastore(object):
             labels[id] = f'{id}) {isolate} [old version]' if new_version else f'{id}) {isolate}'
         return ids, labels
        
-
+    def isolate_exists(self,isolate_id=None):
+        view = self.system.get('view')
+        return self.run_query( f'SELECT EXISTS(SELECT * FROM {view} WHERE id=?)', isolate_id )
 
     
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses

@@ -65,7 +65,8 @@ class PyExport(Plugin):
         if self.has_set_changed():
             return
         if self.params.get('submit'):
-            pass  # TODO Complete action
+            self.__submit()
+            return
         self.__print_interface()
         
     def __print_interface(self):
@@ -88,4 +89,33 @@ class PyExport(Plugin):
         self.print_hidden(['db', 'page', 'name', 'set_id'])
         self.end_form()
         print('</div></div>')
+    
+    def __submit(self):
+        selected = self.params.get('isolate_id')
+        if selected:
+            ids = [int(x) for x in selected.split("\u0000")]
+        else:
+            ids = []
+            
+        self.logger.error(ids)
+        pasted_cleaned_ids, invalid_ids = self.get_ids_from_pasted_list()
+        ids.extend(pasted_cleaned_ids)
+        if len(ids):
+            id_set=set(ids) #Convert to set to remove duplicates
+            ids= list(dict.fromkeys(id_set))
+        
+        print(ids) #TODO Remove
+
+
+        if len(ids) == 0:
+            self.print_bad_status( { 'message' : 'No valid ids have been selected!' } )
+            self.__print_interface()
+            return 
+        if len(invalid_ids):
+            print(invalid_ids)
+            list_string = ', '.join(map(str, invalid_ids))
+            self.print_bad_status(
+                { 'message' :f'The following isolates in your pasted list are invalid: {list_string}.' } )
+            self.__print_interface();
+            return
         
