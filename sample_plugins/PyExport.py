@@ -91,19 +91,8 @@ class PyExport(Plugin):
         print('</div></div>')
     
     def __submit(self):
-        selected = self.params.get('isolate_id')
-        if selected:
-            ids = [int(x) for x in selected.split("\u0000")]
-        else:
-            ids = []
-            
-        self.logger.error(ids)
-        pasted_cleaned_ids, invalid_ids = self.get_ids_from_pasted_list()
-        ids.extend(pasted_cleaned_ids)
-        if len(ids):
-            id_set=set(ids) #Convert to set to remove duplicates
-            ids= list(dict.fromkeys(id_set))
-        
+        ids,invalid_ids = self.process_selected_ids()       
+       
         print(ids) #TODO Remove
 
 

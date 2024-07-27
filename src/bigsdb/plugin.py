@@ -200,6 +200,16 @@ class Plugin(BaseApplication):
             selected_ids = []
         return selected_ids
     
+    def process_selected_ids(self):
+        selected = self.params.get('isolate_id')
+        ids = selected if selected else []
+        pasted_cleaned_ids, invalid_ids = self.__get_ids_from_pasted_list()
+        ids.extend(pasted_cleaned_ids)
+        if len(ids):
+            id_set = set(ids)  # Convert to set to remove duplicates
+            ids = list(dict.fromkeys(id_set))
+        return ids, invalid_ids 
+    
     def print_seqbin_isolate_fieldset(self, options):
         seqbin_count = self.datastore.get_seqbin_count()
         print('<fieldset style="float:left"><legend>Isolates</legend>')
@@ -210,10 +220,14 @@ class Plugin(BaseApplication):
             if (seqbin_count <= MAX_ISOLATES_DROPDOWN and not options['use_all']) \
             or not options['isolate_paste_list']:
                 default = self.params.get('isolate_id')
+                
                 if default:
-                    selected_ids = {int(x) for x in default.split("\u0000")}
+                    selected_ids = default
                 else:
-                    selected_ids = set(options.get('selected_ids', []))
+                    selected_ids = options.get('selected_ids', [])
+                    # if len(selected_ids):
+                    #    selected_ids = set(options.get('selected_ids', [])) 
+                    
                 ids, labels = self.datastore.get_isolates_with_seqbin(options)
                 print('<select name="isolate_id" id="isolate_id" '
                       f'style="min-width:12em;height:{size}em" multiple>')
@@ -245,7 +259,7 @@ class Plugin(BaseApplication):
                 if options['isolate_paste_list']:
                     display = 'block' if self.params.get('isolate_paste_list') \
                     else 'none'
-                    default = self.params.get('isolate_paste_list','')
+                    default = self.params.get('isolate_paste_list', '')
                     print('<div id="isolate_paste_list_div" style="float:left; '
                           f'display:{display}">')
                     print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
@@ -253,7 +267,7 @@ class Plugin(BaseApplication):
                           'placeholder="Paste list of isolate ids (one per line)...">'
                           f'{default}</textarea>')
             else:
-                default = self.params.get('isolate_paste_list','')
+                default = self.params.get('isolate_paste_list', '')
                 print('<textarea name="isolate_paste_list" id="isolate_paste_list" '
                       f'style="height:{list_box_size}em" '
                       'placeholder="Paste list of isolate ids (one per line)...">')
@@ -332,27 +346,19 @@ class Plugin(BaseApplication):
                 
     def end_form(self):
         print('</form>')
-        
-    def filter_list_to_ids(self, list=[]):   
-        returned_list = []
-        for value in list:
-            if bisdb.utils.is_integer(value):
-                returned_list.append(value)
-        return returned_list
-
-    def get_ids_from_pasted_list(self):
+               
+    def __get_ids_from_pasted_list(self):
         cleaned_ids = []
         invalid_ids = []
         if self.params.get('isolate_paste_list'):
             list = self.params.get('isolate_paste_list').split('\n')
             for id in list:
                 id = id.strip()
+                if len(id) == 0:
+                    continue
                 if bigsdb.utils.is_integer(id) and self.datastore.isolate_exists(id):
                     cleaned_ids.append(int(id))
                 else:
-                    if bigsdb.utils.is_integer(id):
-                        invalid_ids.append(int(id))
-                    else:
-                        invalid_ids.append(id)
+                    invalid_ids.append(id)
         return cleaned_ids, invalid_ids
         
