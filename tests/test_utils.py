@@ -49,4 +49,9 @@ class TestUtils(unittest.TestCase):
         self.assertFalse(utils.is_date('-12'))
         self.assertFalse(utils.is_date('-12.3'))
         
+    def test_escape_html(self):
+        escaped = utils.escape_html('<script>alert("test")</script>')
+        self.assertEqual(escaped, 
+            '&lt;script&gt;alert(&quot;test&quot;)&lt;/script&gt;')
+        
         
