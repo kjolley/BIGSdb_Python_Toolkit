@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <db>
 <system
- db="pubmlst_bigsdb_neisseria_isolates"
- host="zoo-lagavulin"
+ db="bigsdb_test_isolates"
+ host="localhost"
  dbtype="isolates"
  webroot="/neisseria"
  webroot_label="*Neisseria* spp."

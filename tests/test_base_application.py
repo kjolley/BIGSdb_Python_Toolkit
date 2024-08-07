@@ -15,14 +15,15 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with BIGSdb Python Toolkit. If not, 
+# along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
 import sys
 import os
 import pathlib
 import unittest
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from bigsdb.base_application import BaseApplication
 
@@ -30,34 +31,36 @@ dir = pathlib.Path(__file__).parent.resolve()
 
 
 class TestBaseApplication(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super(TestBaseApplication, self).__init__(*args, **kwargs)
         self.application = BaseApplication(testing=True)
-         
-    def test_read_config_file(self): 
-        conf_file = f'{dir}/config_files/bigsdb.conf'   
+
+    def test_read_config_file(self):
+        conf_file = f"{dir}/config_files/bigsdb.conf"
         config = self.application._BaseApplication__read_config_file(filename=conf_file)
-        self.assertEqual(config['auth_db'], 'bigsdb_auth')
-        self.assertTrue(isinstance(config['embargo_enabled'], int),
-                        'Config embargo_enabled value is not an int')
-        
+        self.assertEqual(config["auth_db"], "bigsdb_auth")
+        self.assertTrue(
+            isinstance(config["embargo_enabled"], int),
+            "Config embargo_enabled value is not an int",
+        )
+
     def test_read_db_conf_file(self):
-        conf_file = f'{dir}/config_files/db.conf'
+        conf_file = f"{dir}/config_files/db.conf"
         self.application.config = {}
         self.application._BaseApplication__read_db_config_file(filename=conf_file)
-        self.assertEqual(self.application.config['dbhost'],'server1')
-        
+        self.assertEqual(self.application.config["dbhost"], "server1")
+
     def test_read_host_mapping_file(self):
-        conf_file = f'{dir}/config_files/host_mapping.conf'
+        conf_file = f"{dir}/config_files/host_mapping.conf"
         self.application.config = {}
         self.application._BaseApplication__read_host_mapping_file(filename=conf_file)
-        self.assertTrue(self.application.config['host_map']['server1'] == 'server2')
-        
+        self.assertTrue(self.application.config["host_map"]["server1"] == "server2")
+
     def test_read_system_overrides(self):
-        dbase_config = f'{dir}/config_files/config.xml'   
-        overrides_file = f'{dir}/config_files/system.overrides'    
-        self.application._BaseApplication__read_dbase_config_xml_file(filename=dbase_config)
+        dbase_config = f"{dir}/config_files/config.xml"
+        overrides_file = f"{dir}/config_files/system.overrides"
+        self.application._BaseApplication__read_dbase_config_xml_file(
+            filename=dbase_config
+        )
         self.application._BaseApplication__set_system_overrides(filename=overrides_file)
-        self.assertEqual(self.application.system['max_total_length'], 2800000)
-        
+        self.assertEqual(self.application.system["max_total_length"], 2800000)

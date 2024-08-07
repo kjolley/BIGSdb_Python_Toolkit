@@ -15,43 +15,43 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with BIGSdb Python Toolkit. If not, 
+# along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
 import sys
 import os
 import pathlib
 import unittest
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import bigsdb.utils as utils
 
+
 class TestUtils(unittest.TestCase):
-    
     def test_is_integer(self):
-        self.assertTrue(utils.is_integer('345'))
-        self.assertTrue(utils.is_integer('-12'))
-        self.assertFalse(utils.is_integer('abc'))
-        self.assertFalse(utils.is_integer('5.6'))
-        self.assertFalse(utils.is_integer('2024-01-01'))
-    
+        self.assertTrue(utils.is_integer("345"))
+        self.assertTrue(utils.is_integer("-12"))
+        self.assertFalse(utils.is_integer("abc"))
+        self.assertFalse(utils.is_integer("5.6"))
+        self.assertFalse(utils.is_integer("2024-01-01"))
+
     def test_is_float(self):
-        self.assertTrue(utils.is_float('345'))
-        self.assertTrue(utils.is_float('5.6'))
-        self.assertTrue(utils.is_float('-12.3'))
-        self.assertFalse(utils.is_float('2024-01-01'))
-        
+        self.assertTrue(utils.is_float("345"))
+        self.assertTrue(utils.is_float("5.6"))
+        self.assertTrue(utils.is_float("-12.3"))
+        self.assertFalse(utils.is_float("2024-01-01"))
+
     def test_is_date(self):
-        self.assertTrue(utils.is_date('2024-01-01'))
-        self.assertFalse(utils.is_date('2024-02-30'))
-        self.assertFalse(utils.is_date('5/6/2023'))
-        self.assertFalse(utils.is_date('345'))
-        self.assertFalse(utils.is_date('-12'))
-        self.assertFalse(utils.is_date('-12.3'))
-        
+        self.assertTrue(utils.is_date("2024-01-01"))
+        self.assertFalse(utils.is_date("2024-02-30"))
+        self.assertFalse(utils.is_date("5/6/2023"))
+        self.assertFalse(utils.is_date("345"))
+        self.assertFalse(utils.is_date("-12"))
+        self.assertFalse(utils.is_date("-12.3"))
+
     def test_escape_html(self):
         escaped = utils.escape_html('<script>alert("test")</script>')
-        self.assertEqual(escaped, 
-            '&lt;script&gt;alert(&quot;test&quot;)&lt;/script&gt;')
-        
-        
+        self.assertEqual(
+            escaped, "&lt;script&gt;alert(&quot;test&quot;)&lt;/script&gt;"
+        )

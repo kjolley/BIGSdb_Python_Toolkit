@@ -65,8 +65,20 @@ python_plugin_dir=/home/bigsdb/BIGSdb_Python_Toolkit/sample_plugins
 ```
 
 ## Tests
-Tests can be run from the tests/ directory with the following. These currently
-only cover parsing of config files and utility functions:
+Many of the tests involve creating and dropping a test database. The user
+running the tests must have permissions set to enable this. They will also
+need to be able to modify tables which may be owned by the apache user. 
+If running as the bigsdb user, run the following to set these permissions:
+
+```
+psql
+ALTER USER bigsdb createdb;
+ALTER USER bigsdb createrole;
+GRANT postgres TO bigsdb;
+GRANT apache TO bigsdb;
+```
+
+Tests can be run from the tests/ directory with the following:
 
 ```
 python -m unittest discover

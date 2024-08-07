@@ -15,7 +15,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with BIGSdb Python Toolkit. If not, 
+# along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
 import argparse
@@ -24,29 +24,27 @@ import sys
 import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--database', required=True, help='Database config')
-parser.add_argument('--module', required=True, help='Plugin module name')
-parser.add_argument('--module_dir', required=True, help='Plugin module directory')
-parser.add_argument('--arg_file', required=False, help='Argument JSON file')
-parser.add_argument('--run_job', type=bool, default=False)
+parser.add_argument("--database", required=True, help="Database config")
+parser.add_argument("--module", required=True, help="Plugin module name")
+parser.add_argument("--module_dir", required=True, help="Plugin module directory")
+parser.add_argument("--arg_file", required=False, help="Argument JSON file")
+parser.add_argument("--run_job", type=bool, default=False)
 args = parser.parse_args()
 
 sys.path.insert(0, args.module_dir)
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+
 
 def main():
     module = importlib.import_module(args.module)
     plugin = getattr(module, args.module)(
-        database=args.database,
-        arg_file=args.arg_file
+        database=args.database, arg_file=args.arg_file
     )
     if args.run_job:
         plugin.run_job()
     else:
         plugin.run()
 
+
 if __name__ == "__main__":
     main()
-
-
-

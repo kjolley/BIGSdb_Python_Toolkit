@@ -15,18 +15,18 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with BIGSdb Python Toolkit. If not, 
+# along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
 from datetime import datetime
 
 
 def get_datestamp():
-	return datetime.today().strftime('%Y-%m-%d')
+    return datetime.today().strftime("%Y-%m-%d")
 
 
 def get_current_year():
-	return datetime.today().strftime('%Y')
+    return datetime.today().strftime("%Y")
 
 
 def is_integer(n):
@@ -36,7 +36,7 @@ def is_integer(n):
     except ValueError:
         return False
 
-       
+
 def is_float(n):
     try:
         float(n)
@@ -52,13 +52,12 @@ def is_date(string, format="%Y-%m-%d"):
     except ValueError:
         return False
 
-    
+
 def escape_html(string):
-	if string == None:
-		return
-	string = string.replace('&', '&amp;')
-	string = string.replace('"', '&quot;')
-	string = string.replace('<', '&lt;')
-	string = string.replace('>', '&gt;')
-	return string
-	
+    if string == None:
+        return
+    string = string.replace("&", "&amp;")
+    string = string.replace('"', "&quot;")
+    string = string.replace("<", "&lt;")
+    string = string.replace(">", "&gt;")
+    return string
