@@ -82,7 +82,11 @@ class Datastore(object):
             else:
                 return value
         if fetch == "row_hashref":
-            return dict(cursor.fetchone())
+            row = cursor.fetchone()
+            if row is not None:
+                return dict(row)
+            else:
+                return {}
         if fetch == "all_hashref":
             if "key" not in options:
                 self.logger.error("Key field(s) needs to be passed.")
@@ -128,6 +132,15 @@ class Datastore(object):
                 }
             except Exception as e:
                 self.logger.error(str(e))
+
+    def add_user_db(self, id=None, db=None, name=None):  # Just used for tests
+        if id == None:
+            raise ValueError("id parameter not passed")
+        if db == None:
+            raise ValueError("db parameter not passed")
+        if name == None:
+            raise ValueError("name parameter not passed")
+        self.user_dbs[id] = {"db": db, "name": name}
 
     def get_user_info_from_username(self, username):
         if username == None:
@@ -335,9 +348,9 @@ class Datastore(object):
         )
         return self.cache.get("seqbin_count")
 
-    def get_isolates_with_seqbin(self, options):
+    def get_isolates_with_seqbin(self, options={}):
         view = self.system.get("view")
-        labelfield = self.system.get("labelfield")
+        labelfield = self.system.get("labelfield", "isolate")
         if options.get("id_list"):
             raise NotImplementedError
         elif options.get("use_all"):
@@ -367,6 +380,10 @@ class Datastore(object):
         return ids, labels
 
     def isolate_exists(self, isolate_id=None):
+        if isolate_id == None:
+            raise ValueError("No isolate_id parameter passed.")
+        if not bigsdb.utils.is_integer(isolate_id):
+            raise ValueError("Isolate id parameter must be an integer.")
         view = self.system.get("view")
         return self.run_query(
             f"SELECT EXISTS(SELECT * FROM {view} WHERE id=?)", isolate_id
