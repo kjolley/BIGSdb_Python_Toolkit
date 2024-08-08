@@ -39,12 +39,12 @@ HOST = "localhost"
 PORT = 5432
 USER = "bigsdb_tests"
 PASSWORD = "test"
-PERSIST = True  # Set to False to drop and recreate test database each time.
+PERSIST = True  # Set to False to drop and recreate test databases each time.
 
 
-class TestIsolateDB(unittest.TestCase):
+class TestDatastore(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestIsolateDB, self).__init__(*args, **kwargs)
+        super(TestDatastore, self).__init__(*args, **kwargs)
 
     def test_get_eav_fieldnames(self):
         eav_fieldnames = self.datastore.get_eav_fieldnames()
@@ -99,10 +99,69 @@ class TestIsolateDB(unittest.TestCase):
             "SELECT id FROM isolates WHERE id > 1000", None, {"fetch": "col_arrayref"}
         )
         self.assertTrue(len(empty_list) == 0)
-        # TODO row_arrayref
-        # TODO row_hashref
-        # TODO all_hashref
-        # TODO all_arrayref
+        list = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id=?",
+            3,
+            {"fetch": "row_arrayref"},
+        )
+        self.assertEqual(len(list), 3)
+        self.assertEqual(list[2], "UK")
+        empty_list = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id=?",
+            1000,
+            {"fetch": "row_arrayref"},
+        )
+        self.assertTrue(empty_list == None)
+        dict = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id=?",
+            3,
+            {"fetch": "row_hashref"},
+        )
+        self.assertEqual(dict.get("isolate"), "M00242905")
+        self.assertEqual(dict.get("country"), "UK")
+        empty_dict = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id=?",
+            1000,
+            {"fetch": "row_hashref"},
+        )
+        self.assertTrue(empty_dict == None)
+        dict = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id<=2",
+            None,
+            {"key": "id", "fetch": "all_hashref"},
+        )
+        self.assertEqual(len(dict.keys()), 2)
+        self.assertEqual(dict.get(1).get("country"), "USA")
+        self.assertEqual(dict.get(1).get("isolate"), "A4/M1027")
+        self.assertEqual(dict.get(2).get("country"), "Pakistan")
+        empty_dict = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id>1000",
+            None,
+            {"key": "id", "fetch": "all_hashref"},
+        )
+        self.assertTrue(len(empty_dict.keys()) == 0)
+        list = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id<=2",
+            None,
+            {"fetch": "all_arrayref"},
+        )
+        self.assertEqual(len(list), 2)
+        self.assertEqual(list[1][2], "Pakistan")
+        empty_list = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id>1000",
+            None,
+            {"fetch": "all_arrayref"},
+        )
+        self.assertTrue(len(empty_list) == 0)
+        list = self.datastore.run_query(
+            "SELECT id,isolate,country FROM isolates WHERE id<=2",
+            None,
+            {"fetch": "all_arrayref", "slice": {}},
+        )
+        self.assertEqual(len(list), 2)
+        self.assertEqual(list[0].get("country"), "USA")
+        self.assertEqual(list[0].get("isolate"), "A4/M1027")
+        self.assertEqual(list[1].get("country"), "Pakistan")
 
     @classmethod
     def setUpClass(cls):
@@ -202,6 +261,7 @@ class TestIsolateDB(unittest.TestCase):
         cls.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = cls.con.cursor()
         cur.execute(f"DROP DATABASE {TEST_ISOLATE_DATABASE}")
+        cur.execute(f"DROP DATABASE {TEST_USERS_DATABASE}")
         cur.execute(f"DROP USER {USER}")
 
 

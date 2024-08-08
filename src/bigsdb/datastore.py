@@ -77,6 +77,8 @@ class Datastore(object):
         # No differentiation between Perl DBI row_array and row_arrayref in Python.
         if fetch == "row_arrayref" or fetch == "row_array":
             value = cursor.fetchone()
+            if value == None:
+                return
             if len(value) == 1:
                 return value[0]
             else:
@@ -86,10 +88,10 @@ class Datastore(object):
             if row is not None:
                 return dict(row)
             else:
-                return {}
+                return
         if fetch == "all_hashref":
             if "key" not in options:
-                self.logger.error("Key field(s) needs to be passed.")
+                raise ValueError("Key field(s) needs to be passed.")
             return {row[options["key"]]: dict(row) for row in cursor.fetchall()}
         if fetch == "all_arrayref":
             if "slice" in options and options["slice"]:
@@ -183,6 +185,8 @@ class Datastore(object):
             username,
             {"db": user_db, "fetch": "row_hashref"},
         )
+        if user_prefs == None:
+            return user_data
         for key in user_prefs.keys():
             user_data[key] = user_prefs[key]
         return user_data
