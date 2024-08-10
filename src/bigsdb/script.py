@@ -51,6 +51,7 @@ class Script(BaseApplication):
 
     def __init_logger(self, logger=None):
         if logger:
+            self.logger = logger
             return
         self.logger = logging.getLogger(__name__)
         log_file = "/var/log/bigsdb_scripts.log"

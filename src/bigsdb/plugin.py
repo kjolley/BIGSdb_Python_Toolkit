@@ -24,7 +24,8 @@ import json
 import re
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
-from bigsdb.constants import DIRS
+from bigsdb.job_manager import JobManager
+from bigsdb.constants import DIRS, LOGS
 
 MAX_ISOLATES_DROPDOWN = 1000
 
@@ -54,6 +55,9 @@ class Plugin(BaseApplication):
         if retrieving_attributes:
             return
         self.cache = {}
+        att = self.get_attributes()
+        if "offline_jobs" in att.get("requires", ""):
+            self.__initiate_job_manager()
         self.__initiate()
 
     # Override the following functions in subclass
@@ -79,21 +83,19 @@ class Plugin(BaseApplication):
         if logger:
             return
         self.logger = logging.getLogger(__name__)
-        log_file = "/var/log/bigsdb.log"
-
-        f_handler = logging.FileHandler(log_file)
+        f_handler = logging.FileHandler(LOGS["JOBS_LOG"])
         f_handler.setLevel(logging.INFO)
-
         f_format = logging.Formatter(
             "%(asctime)s - %(levelname)s: - %(module)s:%(lineno)d - %(message)s"
         )
         f_handler.setFormatter(f_format)
-
         self.logger.addHandler(f_handler)
 
     def __initiate(self):
         self.params = self.args.get("cgi_params")
         self.script_name = os.environ.get("SCRIPT_NAME", "") or "bigsdb.pl"
+        self.username = self.args.get("username", "")
+        self.email = self.args.get("email", "")
         if self.system.get("dbtype", "") == "isolates":
             self.datastore.initiate_view(
                 username=self.args.get("username"),
@@ -109,6 +111,14 @@ class Plugin(BaseApplication):
             return
         with open(full_path, "r") as f:
             self.args = json.load(f)
+
+    def __initiate_job_manager(self):
+        self.job_manager = JobManager(
+            data_connector=self.data_connector,
+            system=self.system,
+            config=self.config,
+            logger=self.logger,
+        )
 
     def is_curator(self, username):
         if username == None:
@@ -428,6 +438,21 @@ class Plugin(BaseApplication):
 
     def end_form(self):
         print("</form>")
+
+    def get_job_redirect(self, job_id):
+        buffer = """
+<div class="box" id="resultspanel">
+<p>This job has been submitted to the queue.</p>
+<p><a href="$self->{0}?db={1}&amp;page=job&amp;id={2}">
+Follow the progress of this job and view the output.</a></p></div>
+<script type="text/javascript">
+setTimeout(function(){{
+    window.location = "{0}?db={1}&page=job&id={2}";
+}}, 2000);
+</script>""".format(
+            self.script_name, self.instance, job_id
+        )
+        return buffer
 
     def __get_ids_from_pasted_list(self):
         cleaned_ids = []

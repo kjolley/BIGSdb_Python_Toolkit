@@ -20,6 +20,8 @@
 
 DIRS = {"CONFIG_DIR": "/etc/bigsdb", "DBASE_CONFIG_DIR": "/etc/bigsdb/dbases"}
 
+LOGS = {"JOBS_LOG": "/var/log/bigsdb_jobs.log"}
+
 CONNECTION_DETAILS = {
     "HOST": "localhost",
     "PORT": 5432,

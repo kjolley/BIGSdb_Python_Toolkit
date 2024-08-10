@@ -183,3 +183,8 @@ class BaseApplication(object):
             parser=self.parser,
             logger=self.logger,
         )
+
+    def check_required_parameters(self, **kwargs):
+        for key, value in kwargs.items():
+            if value is None:
+                raise ValueError(f"Parameter '{key}' has not been passed.")

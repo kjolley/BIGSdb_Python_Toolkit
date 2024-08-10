@@ -114,3 +114,17 @@ class PyExport(Plugin):
             )
             self.__print_interface()
             return
+        attributes = self.get_attributes()
+        job_id = self.job_manager.add_job(
+            {
+                "dbase_config": self.instance,
+                "ip_address": self.params.get("remote_host"),
+                "module": attributes.get("module"),
+                "priority": attributes.get("priority"),
+                "parameters": self.params,
+                "isolates": ids,
+                "username": self.username,
+                "email": self.email,
+            }
+        )
+        print(self.get_job_redirect(job_id))

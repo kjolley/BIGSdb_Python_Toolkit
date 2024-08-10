@@ -18,6 +18,9 @@
 # along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
+import os
+import random
+import hashlib
 from datetime import datetime
 
 
@@ -30,6 +33,8 @@ def get_current_year():
 
 
 def is_integer(n):
+    if n == None:
+        return False
     try:
         int(n)
         return True
@@ -38,6 +43,8 @@ def is_integer(n):
 
 
 def is_float(n):
+    if n == None:
+        return False
     try:
         float(n)
         return True
@@ -46,6 +53,8 @@ def is_float(n):
 
 
 def is_date(string, format="%Y-%m-%d"):
+    if string == None:
+        return False
     try:
         datetime.strptime(string, format)
         return True
@@ -61,3 +70,25 @@ def escape_html(string):
     string = string.replace("<", "&lt;")
     string = string.replace(">", "&gt;")
     return string
+
+
+def get_random():
+    return (
+        "BIGSdb_"
+        + "{}".format(os.getpid())
+        + "_"
+        + "{:010d}".format(random.randint(0, 9999999999))
+        + "_"
+        + "{:05d}".format(random.randint(0, 99999))
+    )
+
+
+def create_string_from_list(int_list, separator="_"):
+    str_list = [str(i) for i in int_list]
+    return separator.join(str_list)
+
+
+def get_md5_hash(input_string):
+    hasher = hashlib.md5()
+    hasher.update(input_string.encode("utf-8"))
+    return hasher.hexdigest()
