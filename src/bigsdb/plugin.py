@@ -38,11 +38,12 @@ class Plugin(BaseApplication):
         dbase_config_dir=DIRS["DBASE_CONFIG_DIR"],
         arg_file=None,
         retrieving_attributes=False,
+        logger=None,
     ):
         if not retrieving_attributes:
             if database == None:
                 raise ValueError("No database parameter passed.")
-        self.__init_logger()
+        self.__init_logger(logger=logger)
         super(Plugin, self).__init__(
             database=database,
             config_dir=config_dir,
@@ -81,6 +82,7 @@ class Plugin(BaseApplication):
 
     def __init_logger(self, logger=None):
         if logger:
+            self.logger = logger
             return
         self.logger = logging.getLogger(__name__)
         f_handler = logging.FileHandler(LOGS["JOBS_LOG"])

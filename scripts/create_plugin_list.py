@@ -30,6 +30,7 @@ import argparse
 import importlib.util
 import inspect
 import json
+import logging
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--plugin_dir", required=True, help="Plugin directory")
@@ -55,8 +56,13 @@ def main():
         class_name = module_file.replace(".py", "")
         # If the module has the class
         if hasattr(module, class_name):
+            logger = logging.getLogger(__name__)
+            logger.addHandler(logging.NullHandler())
+
             # Create an instance of the class
-            instance = getattr(module, class_name)(retrieving_attributes=True)
+            instance = getattr(module, class_name)(
+                logger=logger, retrieving_attributes=True
+            )
 
             # If the instance has the method
             attributes = {}

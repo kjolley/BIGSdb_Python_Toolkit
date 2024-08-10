@@ -128,3 +128,6 @@ class PyExport(Plugin):
             }
         )
         print(self.get_job_redirect(job_id))
+
+    def get_initiation_values(self):
+        return {"jQuery.jstree": 1, "jQuery.multiselect": 1}
