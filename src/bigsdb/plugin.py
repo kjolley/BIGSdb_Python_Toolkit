@@ -39,9 +39,10 @@ class Plugin(BaseApplication):
         arg_file=None,
         retrieving_attributes=False,
         logger=None,
+        run_job=None,
     ):
         if not retrieving_attributes:
-            if database == None:
+            if arg_file and database == None:
                 raise ValueError("No database parameter passed.")
         self.__init_logger(logger=logger)
         super(Plugin, self).__init__(
@@ -59,7 +60,10 @@ class Plugin(BaseApplication):
         att = self.get_attributes()
         if "offline_jobs" in att.get("requires", ""):
             self.__initiate_job_manager()
-        self.__initiate()
+        if run_job:
+            self.__initiate_job(run_job)
+        else:
+            self.__initiate()
 
     # Override the following functions in subclass
     def get_attributes(self):
@@ -77,7 +81,7 @@ class Plugin(BaseApplication):
     def run(self):
         raise NotImplementedError
 
-    def run_job(self):
+    def run_job(self, job_id):
         pass
 
     def __init_logger(self, logger=None):
@@ -122,6 +126,19 @@ class Plugin(BaseApplication):
             logger=self.logger,
         )
 
+    def __initiate_job(self, job_id):
+        self.params = self.job_manager.get_job_params(job_id)
+        job = self.job_manager.get_job(job_id)
+
+        self.datastore.initiate_view(
+            username=job.get("username"),
+            curate=self.params.get("curate"),
+            set_id=self.params.get("set_id"),
+        )
+
+        self.logger.error(job_id)
+        self.logger.error(self.params)
+
     def is_curator(self, username):
         if username == None:
             return False
@@ -144,7 +161,6 @@ class Plugin(BaseApplication):
                     return icon
 
     def print_bad_status(self, options):
-
         options["message"] = options.get("message", "Failed!")
         buffer = (
             '<div class="box statusbad" style="min-height:5em"><p>'

@@ -22,6 +22,7 @@ import re
 import logging
 import psycopg2.extras
 import random
+from io import StringIO
 import bigsdb.utils
 
 
@@ -392,6 +393,37 @@ class Datastore(object):
         return self.run_query(
             f"SELECT EXISTS(SELECT * FROM {view} WHERE id=?)", isolate_id
         )
+
+    def create_temp_list_table_from_list(self, data_type, list, options={}):
+        pg_data_type = data_type
+        if data_type == "geography_point":
+            pg_data_type = "geography(POINT, 4326)"
+        table = options.get("table", "temp_list" + str(random.randint(0, 99999999)))
+        db = options.get("db", self.db)
+
+        # Convert list to a file-like object
+        list_as_str = "\n".join(str(item) for item in list)
+        list_file_like_object = StringIO(list_as_str)
+
+        with db.cursor() as cursor:
+            if not options.get("no_check_exists", False):
+                cursor.execute(
+                    "SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_name=%s)",
+                    (table,),
+                )
+                if cursor.fetchone()[0]:
+                    return
+            try:
+                cursor.execute(f"CREATE TEMP TABLE {table} (value {pg_data_type});")
+                cursor.copy_from(
+                    file=list_file_like_object, table=table, sep="\t", null=""
+                )
+                db.commit()
+            except Exception as e:
+                self.logger.error(f"Cannot put data into temp table: {e}")
+                db.rollback()
+                raise Exception("Cannot put data into temp table")
+        return table
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses

@@ -163,6 +163,12 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(list[0].get("isolate"), "A4/M1027")
         self.assertEqual(list[1].get("country"), "Pakistan")
 
+    def test_create_temp_list_table_from_list(self):
+        table = self.datastore.create_temp_list_table_from_list("int", [1, 2, 3, 4, 5])
+        qry = f"SELECT COUNT(*) FROM {table}"
+        count = self.datastore.run_query(qry)
+        self.assertEqual(count, 5)
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")

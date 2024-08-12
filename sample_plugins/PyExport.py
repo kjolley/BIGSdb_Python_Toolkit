@@ -75,14 +75,15 @@ class PyExport(Plugin):
         selected_ids = self.get_selected_ids()
         print(
             '<div class="box" id="queryform"><div class="scrollable">'
-            "This script will export the dataset in tab-delimited text and "
-            "Excel formats. Select which fields you would like included. "
-            "Select loci either from the locus list or by selecting one or "
-            "more schemes to include all loci (and/or fields) from a scheme."
-            "</p>"
+            "<p>Currently this is just a demonstration of a plugin that uses the "
+            "offline job manager. You can select isolate ids and the job will "
+            "get sent to the queue. When run, it will create a tab-delimited "
+            "text file containing the primary metadata for each selected isolate "
+            "record.</p>"
+            "<p>New methods will be added later to support selecting specific fields, "
+            "loci, and schemes.</p>"
         )
         self.start_form()
-        # TODO start form
         self.print_seqbin_isolate_fieldset(
             {
                 "use_all": 1,
@@ -97,9 +98,6 @@ class PyExport(Plugin):
 
     def __submit(self):
         ids, invalid_ids = self.process_selected_ids()
-
-        print(ids)  # TODO Remove
-
         if len(ids) == 0:
             self.print_bad_status({"message": "No valid ids have been selected!"})
             self.__print_interface()
@@ -115,6 +113,10 @@ class PyExport(Plugin):
             self.__print_interface()
             return
         attributes = self.get_attributes()
+        if self.args.get("curate"):
+            self.params["curate"] = 1
+        if self.args.get("set_id"):
+            self.params["set_id"] = self.args.get("set_id")
         job_id = self.job_manager.add_job(
             {
                 "dbase_config": self.instance,
@@ -131,3 +133,20 @@ class PyExport(Plugin):
 
     def get_initiation_values(self):
         return {"jQuery.jstree": 1, "jQuery.multiselect": 1}
+
+    def run_job(self, job_id):
+        view = self.system.get("view")
+        ids = self.job_manager.get_job_isolates(job_id)
+        table = self.datastore.create_temp_list_table_from_list("int", ids)
+        outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
+        fields = self.parser.get_field_list()
+        qry = (
+            "SELECT "
+            + ",".join(fields)
+            + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
+        )
+        results = self.datastore.run_query(qry, None, {"fetch": "all_arrayref"})
+        with open(outfile, "w") as f:
+            f.write("\t".join(fields))
+            for record in results:
+                f.write("\t".join("" if item is None else str(item) for item in record))

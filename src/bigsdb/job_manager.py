@@ -20,6 +20,7 @@
 
 import os
 import logging
+import psycopg2.extras
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.constants import CONNECTION_DETAILS, LOGS
@@ -70,7 +71,7 @@ class JobManager(BaseApplication):
             password=self.config.get("dbpassword") or PASSWORD,
         )
 
-    def ___has_ip_address_got_queued_jobs(self, ip_address):
+    def __has_ip_address_got_queued_jobs(self, ip_address):
         cursor = self.db.cursor()
         qry = "SELECT EXISTS(SELECT * FROM jobs WHERE (ip_address,status)=(%s,%s))"
         try:
@@ -207,7 +208,7 @@ class JobManager(BaseApplication):
         # priority on any new jobs from them. This will prevent a single user from
         # flooding the queue and preventing other user jobs from running.
 
-        if self.___has_ip_address_got_queued_jobs(params.get("ip_address")):
+        if self.__has_ip_address_got_queued_jobs(params.get("ip_address")):
             priority += 2
         job_id = params.get("job_id") or bigsdb.utils.get_random()
 
@@ -300,3 +301,42 @@ class JobManager(BaseApplication):
             self.db.rollback()
 
         return job_id
+
+    def get_job(self, job_id):
+        qry = (
+            "SELECT *,extract(epoch FROM now() - start_time) AS elapsed,"
+            "extract(epoch FROM stop_time - start_time) AS total_time, localtimestamp "
+            "AS query_time FROM jobs WHERE id=%s"
+        )
+        cursor = self.db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute(qry, [job_id])
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+        row = cursor.fetchone()
+        if row is not None:
+            return dict(row)
+        else:
+            return
+
+    def get_job_params(self, job_id):
+        cursor = self.db.cursor()
+        qry = "SELECT key,value FROM params WHERE job_id=%s"
+        try:
+            cursor.execute(qry, [job_id])
+            params = {}
+            for key, value in cursor.fetchall():
+                params[key] = value
+            return params
+
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+
+    def get_job_isolates(self, job_id):
+        cursor = self.db.cursor()
+        qry = "SELECT isolate_id FROM isolates WHERE job_id=%s ORDER BY isolate_id"
+        try:
+            cursor.execute(qry, [job_id])
+            return [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")

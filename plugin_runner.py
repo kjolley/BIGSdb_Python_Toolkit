@@ -24,11 +24,15 @@ import sys
 import os
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--database", required=True, help="Database config")
-parser.add_argument("--module", required=True, help="Plugin module name")
-parser.add_argument("--module_dir", required=True, help="Plugin module directory")
-parser.add_argument("--arg_file", required=False, help="Argument JSON file")
-parser.add_argument("--run_job", type=bool, default=False)
+parser.add_argument("--database", type=str, required=True, help="Database config")
+parser.add_argument("--module", type=str, required=True, help="Plugin module name")
+parser.add_argument(
+    "--module_dir", type=str, required=True, help="Plugin module directory"
+)
+parser.add_argument("--arg_file", type=str, required=False, help="Argument JSON file")
+parser.add_argument(
+    "--run_job", type=str, required=False, help="Run specified job from queue"
+)
 args = parser.parse_args()
 
 sys.path.insert(0, args.module_dir)
@@ -36,12 +40,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src"
 
 
 def main():
+    if args.run_job and args.arg_file:
+        raise ValueError("--arg_file and --run_job are mutually exclusive.")
+    elif not (args.run_job or args.arg_file):
+        raise ValueError("Either --arg_file or --run_job must be specified")
     module = importlib.import_module(args.module)
     plugin = getattr(module, args.module)(
-        database=args.database, arg_file=args.arg_file
+        database=args.database, arg_file=args.arg_file, run_job=args.run_job
     )
     if args.run_job:
-        plugin.run_job()
+        plugin.run_job(job_id=args.run_job)
     else:
         plugin.run()
 
