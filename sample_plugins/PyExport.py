@@ -162,5 +162,25 @@ class PyExport(Plugin):
                 "filename": f"{job_id}.txt",
                 "description": "01_Export table (text)",
                 "compress": 1,
+                "keep_original": 1,  # Original needed to generate Excel file
             },
         )
+        excel_file = bigsdb.utils.text2excel(
+            outfile,
+            {
+                "worksheet": "Export",
+                "text_fields": self.system.get("labelfield"),
+            },
+        )
+        if Path(excel_file).is_file():
+            self.job_manager.update_job_output(
+                job_id,
+                {
+                    "filename": f"{job_id}.xlsx",
+                    "description": "01_Export table (Excel)",
+                    "compress": 1,
+                },
+            )
+
+        if Path(f"{outfile}.gz").is_file():
+            Path(outfile).unlink()

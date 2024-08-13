@@ -17,7 +17,8 @@ classifiers = [
 keywords = []
 dependencies = [
 	"psycopg2 >= 2.9.9",
-  	"pyuca >=1.2"
+  	"pyuca >=1.2",
+  	"XlsxWriter>=3.2.0"
 ]
 requires-python = ">=3.9"
 
