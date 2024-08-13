@@ -22,6 +22,7 @@ import os
 import logging
 import psycopg2.extras
 import subprocess
+import io
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.constants import CONNECTION_DETAILS, LOGS
@@ -284,10 +285,18 @@ class JobManager(BaseApplication):
                         value = "||".join(value)
                     cursor.execute(qry, [job_id, param, value])
 
-            qry = "INSERT INTO isolates(job_id,isolate_id) VALUES (%s,%s)"
+            # Use copy_from file-like-object to speed up populating isolates table.
             isolates = params.get("isolates", [])
-            for isolate_id in isolates:
-                cursor.execute(qry, [job_id, isolate_id])
+            qry = None  # In case we get an exception
+            for batch_isolates in bigsdb.utils.batch(isolates, 100):
+                isolate_data = "\n".join(
+                    [f"{job_id}\t{isolate_id}" for isolate_id in batch_isolates]
+                )
+                data_io = io.StringIO(isolate_data)
+                cursor.copy_from(
+                    data_io, "isolates", columns=("job_id", "isolate_id"), sep="\t"
+                )
+
             qry = "INSERT INTO profiles (job_id,scheme_id,profile_id) VALUES (%s,%s,%s)"
             profiles = params.get("profiles", [])
             for profile_id in profiles:
@@ -300,7 +309,7 @@ class JobManager(BaseApplication):
                 cursor.execute(qry, [job_id, locus])
             self.db.commit()
         except Exception as e:
-            self.logger.error(f"{e} Query:{qry}")
+            self.logger.error(f"{e}; Query:{qry}")
             self.db.rollback()
 
         return job_id

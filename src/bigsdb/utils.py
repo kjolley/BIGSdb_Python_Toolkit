@@ -22,6 +22,7 @@ import os
 import random
 import hashlib
 from datetime import datetime
+from itertools import islice
 
 
 def get_datestamp():
@@ -92,3 +93,13 @@ def get_md5_hash(input_string):
     hasher = hashlib.md5()
     hasher.update(input_string.encode("utf-8"))
     return hasher.hexdigest()
+
+
+# Splits an iterable into batches of size n.
+def batch(iterable, n=1):
+    it = iter(iterable)
+    while True:
+        chunk = list(islice(it, n))
+        if not chunk:
+            break
+        yield chunk

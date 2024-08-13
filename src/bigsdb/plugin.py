@@ -470,6 +470,7 @@ setTimeout(function(){{
         return buffer
 
     def __get_ids_from_pasted_list(self):
+        integer_ids = []
         cleaned_ids = []
         invalid_ids = []
         if self.params.get("isolate_paste_list"):
@@ -478,8 +479,15 @@ setTimeout(function(){{
                 id = id.strip()
                 if len(id) == 0:
                     continue
-                if bigsdb.utils.is_integer(id) and self.datastore.isolate_exists(id):
-                    cleaned_ids.append(int(id))
+                if bigsdb.utils.is_integer(id):
+                    integer_ids.append(int(id))
                 else:
                     invalid_ids.append(id)
+            for isolate_ids in bigsdb.utils.batch(integer_ids, 100):
+                existing_ids = set(self.datastore.isolate_exists_batch(isolate_ids))
+                for id in isolate_ids:
+                    if id in existing_ids:
+                        cleaned_ids.append(id)
+                    else:
+                        invalid_ids.append(id)
         return cleaned_ids, invalid_ids

@@ -104,7 +104,6 @@ class PyExport(Plugin):
             self.__print_interface()
             return
         if len(invalid_ids):
-            print(invalid_ids)
             list_string = ", ".join(map(str, invalid_ids))
             self.print_bad_status(
                 {

@@ -394,6 +394,16 @@ class Datastore(object):
             f"SELECT EXISTS(SELECT * FROM {view} WHERE id=?)", isolate_id
         )
 
+    def isolate_exists_batch(self, isolate_ids=[]):
+        for isolate_id in isolate_ids:
+            if not bigsdb.utils.is_integer(isolate_id):
+                raise ValueError(f"Isolate id {isolate_id} must be an integer.")
+        view = self.system.get("view")
+        placeholders = ",".join(["%s"] * len(isolate_ids))
+        qry = f"SELECT id FROM {view} WHERE id IN ({placeholders})"
+        existing_ids = self.run_query(qry, isolate_ids, {"fetch": "col_arrayref"})
+        return existing_ids
+
     def create_temp_list_table_from_list(self, data_type, list, options={}):
         pg_data_type = data_type
         if data_type == "geography_point":

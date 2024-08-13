@@ -90,6 +90,12 @@ class TestDatastore(unittest.TestCase):
         self.assertTrue(self.datastore.isolate_exists(1))
         self.assertFalse(self.datastore.isolate_exists(1200))
 
+    def test_isolate_exists_batch(self):
+        exists = self.datastore.isolate_exists_batch([1, 2, 3, 1200])
+        self.assertTrue(1 in exists)
+        self.assertTrue(2 in exists)
+        self.assertFalse(1200 in exists)
+
     def test_run_query(self):
         list = self.datastore.run_query(
             "SELECT id FROM isolates", None, {"fetch": "col_arrayref"}
