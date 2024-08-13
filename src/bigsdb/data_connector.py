@@ -49,3 +49,18 @@ class DataConnector(object):
             )
             self.db[cache_name] = conn
         return self.db[cache_name]
+
+    def drop_all_connections(self, except_list=None):
+        if except_list is None or not isinstance(except_list, list):
+            except_list = []
+            except_set = set(except_list)
+        for db in list(self.db.keys()):
+            if db in except_set:
+                continue
+            try:
+                self.db[db].close()
+            except Exception as e:
+                self.logger.error(
+                    f"Error disconnecting from database {self.db[db]}: {e}"
+                )
+            del self.db[db]

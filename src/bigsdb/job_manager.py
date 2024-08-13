@@ -21,6 +21,7 @@
 import os
 import logging
 import psycopg2.extras
+import subprocess
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.constants import CONNECTION_DETAILS, LOGS
@@ -60,9 +61,11 @@ class JobManager(BaseApplication):
         f_handler.setFormatter(f_format)
         self.logger.addHandler(f_handler)
 
-    def __db_connect(self):
+    def __db_connect(self, options={}):
         if self.config.get("jobs_db") == None:
             raise ValueError("jobs_db not defined in bigsdb.conf")
+        if options.get("reconnect"):
+            self.data_connector.drop_all_connections()
         self.db = self.data_connector.get_connection(
             dbase_name=self.config["jobs_db"],
             host=self.config.get("dbhost") or HOST,
@@ -340,3 +343,39 @@ class JobManager(BaseApplication):
             return [row[0] for row in cursor.fetchall()]
         except Exception as e:
             self.logger.error(f"{e} Query:{qry}")
+
+    def update_job_output(self, job_id, output_dict={}):
+        if output_dict.get("filename") == None:
+            raise ValueError("filename not passed.")
+        if output_dict.get("description") == None:
+            raise ValueError("description not passed.")
+        if self.db.closed:
+            self.__db_connect({"reconnect": True})
+        if output_dict.get("compress"):
+            full_path = os.path.join(self.config["tmp_dir"], output_dict["filename"])
+            if os.path.getsize(full_path) > (10 * 1024 * 1024):  # >10 MB
+                if output_dict.get("keep_original"):
+                    result = subprocess.run(
+                        ["gzip", "-c", full_path, ">", f"{full_path}.gz"],
+                        capture_output=True,
+                        text=True,
+                    )
+                else:
+                    result = subprocess.run(
+                        ["gzip", full_path], capture_output=True, text=True
+                    )
+                if result.returncode != 0:
+                    self.logger.error(f"Cannot gzip file {full_path}: {result.stderr}")
+                else:
+                    output_dict["filename"] += ".gz"
+                    output_dict["description"] += " [gzipped file]"
+        cursor = self.db.cursor()
+        qry = "INSERT INTO output (job_id,filename,description) VALUES (%s,%s,%s)"
+        try:
+            cursor.execute(
+                qry, [job_id, output_dict["filename"], output_dict["description"]]
+            )
+            self.db.commit()
+        except:
+            self.logger.error(f"{e} Query:{qry}")
+            self.db.rollback()

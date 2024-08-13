@@ -136,9 +136,6 @@ class Plugin(BaseApplication):
             set_id=self.params.get("set_id"),
         )
 
-        self.logger.error(job_id)
-        self.logger.error(self.params)
-
     def is_curator(self, username):
         if username == None:
             return False

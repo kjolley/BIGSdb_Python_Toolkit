@@ -19,6 +19,7 @@
 # see <https://www.gnu.org/licenses/>.
 
 import os
+from pathlib import Path
 import bigsdb.utils
 from bigsdb.plugin import Plugin
 
@@ -147,6 +148,20 @@ class PyExport(Plugin):
         )
         results = self.datastore.run_query(qry, None, {"fetch": "all_arrayref"})
         with open(outfile, "w") as f:
-            f.write("\t".join(fields))
+            f.write("\t".join(fields) + "\n")
             for record in results:
-                f.write("\t".join("" if item is None else str(item) for item in record))
+                f.write(
+                    "\t".join("" if item is None else str(item) for item in record)
+                    + "\n"
+                )
+        if not Path(outfile).is_file():
+            self.logger.error(f"File {outfile} does not exist")
+            return
+        self.job_manager.update_job_output(
+            job_id,
+            {
+                "filename": f"{job_id}.txt",
+                "description": "01_Export table (text)",
+                "compress": 1,
+            },
+        )
