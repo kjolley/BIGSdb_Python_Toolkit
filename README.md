@@ -1,9 +1,9 @@
 # BIGSdb_Python_Toolkit
-Python libraries for interacting with BIGSdb databases.
+Python libraries for interacting with local BIGSdb databases.
 
 The modules included in this package enable scripts to be written in Python
-that can query and update BIGSdb databases using similar method calls as used
-in the main [BIGSdb Perl](https://github.com/kjolley/BIGSdb) package.
+that can query and update local BIGSdb databases using similar method calls as
+used in the main [BIGSdb Perl](https://github.com/kjolley/BIGSdb) package.
 
 A script object that is passed a database config name will automatically parse
 the BIGSdb configuration and database configuration files, and set up the 
