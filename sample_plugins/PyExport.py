@@ -183,4 +183,6 @@ class PyExport(Plugin):
             )
 
         if Path(f"{outfile}.gz").is_file():
+            self.logger.error(f"Gzipped file: {outfile}.gz")
+            self.logger.error(f"Deleting: {outfile}")
             Path(outfile).unlink()

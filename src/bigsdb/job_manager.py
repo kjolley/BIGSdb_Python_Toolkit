@@ -22,6 +22,8 @@ import os
 import logging
 import psycopg2.extras
 import subprocess
+import gzip
+import shutil
 import io
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
@@ -363,18 +365,21 @@ class JobManager(BaseApplication):
         if output_dict.get("compress"):
             full_path = os.path.join(self.config["tmp_dir"], output_dict["filename"])
             if os.path.getsize(full_path) > (10 * 1024 * 1024):  # >10 MB
+                gzipped_path = f"{full_path}.gz"
                 if output_dict.get("keep_original"):
-                    result = subprocess.run(
-                        ["gzip", "-c", full_path, ">", f"{full_path}.gz"],
-                        capture_output=True,
-                        text=True,
-                    )
+                    with open(full_path, "rb") as f_in, gzip.open(
+                        gzipped_path, "wb"
+                    ) as f_out:
+                        shutil.copyfileobj(f_in, f_out)
                 else:
-                    result = subprocess.run(
-                        ["gzip", full_path], capture_output=True, text=True
-                    )
-                if result.returncode != 0:
-                    self.logger.error(f"Cannot gzip file {full_path}: {result.stderr}")
+                    with open(full_path, "rb") as f_in, gzip.open(
+                        gzipped_path, "wb"
+                    ) as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    os.remove(full_path)
+
+                if not os.path.exists(gzipped_path):
+                    self.logger.error(f"Cannot gzip file {full_path}")
                 else:
                     output_dict["filename"] += ".gz"
                     output_dict["description"] += " [gzipped file]"
