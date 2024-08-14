@@ -193,7 +193,7 @@ def text2excel(text_file, options={}):
                         max_col,
                         {
                             "type": "formula",
-                            "criteria": f'=${col_letter}$2="{formatting["value"]}"',
+                            "criteria": f'=${col_letter}2="{formatting["value"]}"',
                             "format": format,
                         },
                     )
@@ -201,12 +201,12 @@ def text2excel(text_file, options={}):
                     worksheet.conditional_format(
                         1,
                         formatting["col"],
-                        row,
+                        row - 1,
                         formatting["col"],
                         {
                             "type": "cell",
                             "criteria": "==",
-                            "value": formatting["value"],
+                            "value": f'"{formatting["value"]}"',
                             "format": format,
                         },
                     )
