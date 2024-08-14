@@ -19,9 +19,10 @@
 # see <https://www.gnu.org/licenses/>.
 
 import os
+import signal
 import logging
 import psycopg2.extras
-import subprocess
+from psycopg2 import sql
 import gzip
 import shutil
 import io
@@ -333,6 +334,19 @@ class JobManager(BaseApplication):
         else:
             return
 
+    def get_job_status(self, job_id):
+        qry = "SELECT status,cancel,pid FROM jobs WHERE id=%s"
+        cursor = self.db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute(qry, [job_id])
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+        row = cursor.fetchone()
+        if row is not None:
+            return dict(row)
+        else:
+            return {}
+
     def get_job_params(self, job_id):
         cursor = self.db.cursor()
         qry = "SELECT key,value FROM params WHERE job_id=%s"
@@ -393,3 +407,32 @@ class JobManager(BaseApplication):
         except:
             self.logger.error(f"{e} Query:{qry}")
             self.db.rollback()
+
+    def update_job_status(self, job_id, status_dict={}):
+        if self.db.closed:
+            self.__db_connect({"reconnect": True})
+        if self.db.closed:
+            self._db_connect(reconnect=True)
+
+        keys = sorted(status_dict.keys())
+        values = [status_dict[key] for key in keys]
+
+        cursor = self.db.cursor()
+        qry = sql.SQL("UPDATE jobs SET {} WHERE id=%s").format(
+            sql.SQL(", ").join(sql.Identifier(key) + sql.SQL("=%s") for key in keys)
+        )
+
+        try:
+            cursor.execute(qry, values + [job_id])
+            self.db.commit()
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+            self.db.rollback()
+
+        if status_dict.get("status") == "failed":
+            return
+
+        job = self.get_job_status(job_id)
+        if job.get("status", "") == "cancelled" or job.get("cancel"):
+            if job.get("pid"):
+                os.kill(job.get("pid"), signal.SIGTERM)

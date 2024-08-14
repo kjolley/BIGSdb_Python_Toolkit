@@ -146,13 +146,23 @@ class PyExport(Plugin):
             + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
         )
         results = self.datastore.run_query(qry, None, {"fetch": "all_arrayref"})
+        last_progress = 0
+        total = len(results)
         with open(outfile, "w") as f:
             f.write("\t".join(fields) + "\n")
+            i = 0
             for record in results:
                 f.write(
                     "\t".join("" if item is None else str(item) for item in record)
                     + "\n"
                 )
+                i += 1
+                progress = int(80 * (i / total))
+                if progress > last_progress:
+                    last_progress = progress
+                    self.job_manager.update_job_status(
+                        job_id, {"percent_complete": progress}
+                    )
         if not Path(outfile).is_file():
             self.logger.error(f"File {outfile} does not exist")
             return
@@ -164,6 +174,9 @@ class PyExport(Plugin):
                 "compress": 1,
                 "keep_original": 1,  # Original needed to generate Excel file
             },
+        )
+        self.job_manager.update_job_status(
+            job_id, {"percent_complete": 80, "stage": "Creating Excel file"}
         )
         excel_file = bigsdb.utils.text2excel(
             outfile,
