@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bigsdb"
-version = "0.0.3"
+version = "0.0.4"
 description = "BIGSdb Python Toolkit"
 readme = "README.md"
 authors = [{ name = "Keith Jolley", email = "keith.jolley@biology.ox.ac.uk" }]
