@@ -59,6 +59,10 @@ class TestXmlParser(unittest.TestCase):
         self.assertEqual(len(options), 10)
         self.assertEqual(options[2], "eye")
 
+    def test_is_field(self):
+        self.assertTrue(self.parser.is_field("isolate"))
+        self.assertFalse(self.parser.is_field("area"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,7 @@ import logging
 import os
 import json
 import re
+from collections import defaultdict
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.job_manager import JobManager
@@ -56,7 +57,7 @@ class Plugin(BaseApplication):
             self.__read_arg_file(arg_file)
         if retrieving_attributes:
             return
-        self.cache = {}
+        self.cache = defaultdict(nested_defaultdict)
         att = self.get_attributes()
         if "offline_jobs" in att.get("requires", ""):
             self.__initiate_job_manager()
@@ -136,13 +137,11 @@ class Plugin(BaseApplication):
             set_id=self.params.get("set_id"),
         )
 
-    def is_curator(self, username):
-        if username == None:
+    def is_curator(self):
+        if self.username == None:
             return False
-        user_info = self.datastore.get_user_info_from_username(username)
-        if user_info == None or (
-            user_info["status"] != "curator" and user_info["status"] != "admin"
-        ):
+        user_info = self.datastore.get_user_info_from_username(self.username)
+        if user_info == None or (user_info["status"] not in ["curator", "admin"]):
             return False
         return True
 
@@ -491,3 +490,103 @@ setTimeout(function(){{
                     else:
                         invalid_ids.append(id)
         return cleaned_ids, invalid_ids
+
+    def print_isolate_fields_fieldset(self, options={}):
+        set_id = self.get_set_id()
+        is_curator = self.is_curator()
+        fields = self.parser.get_field_list({"no_curate_only": not is_curator})
+        optgroups = []
+        labels = {}
+        group_list = self.system.get("field_groups", "").split(",")
+        group_members = {}
+        attributes = self.parser.get_all_field_attributes()
+
+        for field in fields:
+            group = attributes[field].get("group", "General")
+            group_members.setdefault(group, []).append(field)
+            label = field.replace("_", " ")
+            labels[field] = label
+            if field == self.system.get("labelfield") and not options.get("no_aliases"):
+                group_members["General"].append("aliases")
+            if options.get("extended_attributes"):
+                extended = self.get_extended_attributes()
+                extatt = extended.get(field, [])
+                if isinstance(extatt, list):
+                    for extended_attribute in extatt:
+                        extended_field = f"{field}___{extended_attribute}"
+                        group_members.setdefault(group, []).append(extended_field)
+                        labels[extended_field] = extended_attribute.replace("_", " ")
+
+        for group in [None] + group_list:
+            name = group or "General"
+            name = name.split("|")[0]
+            if name in group_members:
+                optgroups.append({"name": name, "values": group_members[name]})
+        html = []
+        html.append('<fieldset style="float:left"><legend>Provenance fields</legend>')
+        html.append(self.scrolling_list("fields", "fields", optgroups, labels, options))
+        if not options.get("no_all_none"):
+            html.append('<div style="text-align:center">')
+            html.append(
+                '<input type="button" onclick=\'listbox_selectall("fields",true)\' '
+                'value="All" style="margin-top:1em" class="small_submit" />'
+            )
+            html.append(
+                '<input type="button" onclick=\'listbox_selectall("fields",false)\' '
+                'value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
+            )
+            html.append("</div>")
+        html.append("</fieldset>")
+
+        print("\n".join(html))
+
+    def scrolling_list(self, name, id, items, labels, options):
+        size = options.get("size", 8)
+        default = options.get("default", [])
+        if isinstance(items[0], dict):  # Check if items are optgroups
+            options_html = "".join(
+                [
+                    self.__generate_optgroup_html(optgroup, labels, default)
+                    for optgroup in items
+                ]
+            )
+        else:  # Handle simple list of values
+            options_html = "".join(
+                [
+                    f'<option value="{value}"{" selected" if value in default else ""}>{labels.get(value, value)}</option>'
+                    for value in items
+                ]
+            )
+        return f'<select name="{name}" id="{id}" multiple="true" size="{size}">{options_html}</select>'
+
+    def __generate_optgroup_html(self, optgroup, labels, default):
+        name = optgroup["name"]
+        values = optgroup["values"]
+        options = "".join(
+            [
+                f'<option value="{value}"{" selected" if value in default else ""}>{labels.get(value, value)}</option>'
+                for value in values
+            ]
+        )
+        return f'<optgroup label="{name}">{options}</optgroup>'
+
+    def get_extended_attributes(self):
+        if not self.cache.get("extended_attributes"):
+            data = self.datastore.run_query(
+                "SELECT isolate_field,attribute FROM isolate_field_extended_attributes "
+                "ORDER BY field_order",
+                None,
+                {"fetch": "all_arrayref", "slice": {}},
+            )
+            extended = {}
+            for value in data:
+                if not extended.get(value.get("isolate_field")):
+                    extended[value["isolate_field"]] = []
+                extended[value["isolate_field"]].append(value["attribute"])
+            self.cache["extended_attributes"] = extended
+        return self.cache.get("extended_attributes")
+
+
+# Function to create a nested defaultdict
+def nested_defaultdict():
+    return defaultdict(nested_defaultdict)

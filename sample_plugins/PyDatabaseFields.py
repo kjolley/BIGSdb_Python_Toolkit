@@ -102,7 +102,7 @@ $(function () {
         return {"jQuery.tablesort": 1}
 
     def __print_provenance_fields(self):
-        is_curator = self.is_curator(self.args.get("username"))
+        is_curator = self.is_curator()
         field_list = self.parser.get_field_list({"no_curate_only": not is_curator})
 
         td = 1

@@ -134,3 +134,8 @@ class XMLParser(object):
     def __get_special_optlist_values(self, values):
         if values == "COUNTRIES":
             return bigsdb.constants.COUNTRIES.keys()
+
+    def is_field(self, field):
+        if field == None:
+            return
+        return field in self.fields

@@ -79,8 +79,8 @@ class PyExport(Plugin):
             "<p>Currently this is just a demonstration of a plugin that uses the "
             "offline job manager. You can select isolate ids and the job will "
             "get sent to the queue. When run, it will create a tab-delimited "
-            "text file containing the primary metadata for each selected isolate "
-            "record.</p>"
+            "text file and an Excel file containing the primary metadata for "
+            "each selected isolate record.</p>"
             "<p>New methods will be added later to support selecting specific fields, "
             "loci, and schemes.</p>"
         )
@@ -90,6 +90,13 @@ class PyExport(Plugin):
                 "use_all": 1,
                 "selected_ids": selected_ids,
                 "isolate_paste_list": 1,
+            }
+        )
+        self.print_isolate_fields_fieldset(
+            {
+                "extended_attributes": 1,
+                "default": ["id", self.system.get("labelfield")],
+                "no_all_none": 1,
             }
         )
         self.print_action_fieldset({"no_reset": 1})
@@ -139,24 +146,45 @@ class PyExport(Plugin):
         ids = self.job_manager.get_job_isolates(job_id)
         table = self.datastore.create_temp_list_table_from_list("int", ids)
         outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
-        fields = self.parser.get_field_list()
+        #        self.cache["extended_attributes"] = {}
+        #        fields = self.parser.get_field_list()
+        fields = []
+        param_fields = self.params.get("fields", "").split("||")
+        header = []
+        for field in param_fields:
+            if self.parser.is_field(field):
+                fields.append(field)
+                header.append(field)
+            elif "___" in field:  # Extended attribute
+                header.append(field.split("___")[1])
+        if len(fields) == 0:
+            fields = ["id"]
         qry = (
             "SELECT "
             + ",".join(fields)
             + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
         )
-        results = self.datastore.run_query(qry, None, {"fetch": "all_arrayref"})
+        results = self.datastore.run_query(
+            qry, None, {"fetch": "all_arrayref", "slice": {}}
+        )
         last_progress = 0
         total = len(results)
         with open(outfile, "w") as f:
-            f.write("\t".join(fields) + "\n")
+            f.write("\t".join(header) + "\n")
             i = 0
             for record in results:
-                f.write(
-                    "\t".join("" if item is None else str(item) for item in record)
-                    + "\n"
-                )
+                for field in param_fields:
+                    if field != fields[0]:
+                        f.write("\t")
+                        first_field = 0
+                    if self.parser.is_field(field):
+                        f.write(str(record.get(field, "")))
+                    elif "___" in field:  # Extended attribute
+                        ext_value = self.__get_extended_attribute_value(record, field)
+                        f.write(ext_value)
+
                 i += 1
+                f.write("\n")
                 progress = int(80 * (i / total))
                 if progress > last_progress:
                     last_progress = progress
@@ -196,6 +224,35 @@ class PyExport(Plugin):
             )
 
         if Path(f"{outfile}.gz").is_file():
-            self.logger.error(f"Gzipped file: {outfile}.gz")
-            self.logger.error(f"Deleting: {outfile}")
             Path(outfile).unlink()
+
+    def __get_extended_attribute_value(self, record, field):
+        isolate_field, attribute = field.split("___")
+        if record.get(isolate_field, "") == "":
+            return ""
+        if not self.cache["extended_attributes"][attribute][record[isolate_field], ""]:
+            self.cache["extended_attributes"][attribute][
+                record.get(isolate_field)
+            ] = self.datastore.run_query(
+                "SELECT value FROM isolate_value_extended_attributes WHERE "
+                "(isolate_field,attribute,field_value)=(?,?,?)",
+                [
+                    isolate_field,
+                    attribute,
+                    record[isolate_field],
+                ],
+            )
+        return self.cache["extended_attributes"][attribute][record[isolate_field]] or ""
+
+    def get_plugin_javascript(self):
+        return """
+$(document).ready(function(){ 
+    $('#fields,#eav_fields,#composite_fields,#locus,#classification_schemes').multiselect({
+         classes: 'filter',
+         menuHeight: 250,
+         menuWidth: 400,
+         selectedList: 8
+      });
+    $('#locus').multiselectfilter();
+});
+"""
