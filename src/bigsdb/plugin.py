@@ -586,6 +586,49 @@ setTimeout(function(){{
             self.cache["extended_attributes"] = extended
         return self.cache.get("extended_attributes")
 
+    def print_eav_fields_fieldset(self, options={}):
+        eav_fields = self.datastore.get_eav_fields()
+        if not eav_fields:
+            return
+
+        group_list = self.system.get("eav_groups", "").split(",")
+        values = []
+        labels = {}
+
+        if group_list:
+            eav_groups = {field["field"]: field["category"] for field in eav_fields}
+            group_members = {}
+            for eav_field in eav_fields:
+                fieldname = eav_field["field"]
+                labels[fieldname] = fieldname.replace("_", " ")
+                if eav_groups.get(fieldname):
+                    group_members.setdefault(eav_groups[fieldname], []).append(
+                        fieldname
+                    )
+                else:
+                    group_members.setdefault("General", []).append(fieldname)
+
+            for group in [None] + group_list:
+                name = group if group else "General"
+                name = name.split("|")[0]
+                if isinstance(group_members.get(name), list):
+                    values.append({"name": name, "values": group_members[name]})
+        else:
+            values = self.datastore.get_eav_fieldnames()
+
+        legend = self.system.get("eav_fields", "Secondary metadata")
+        print(f'<fieldset style="float:left"><legend>{legend}</legend>')
+        print(self.scrolling_list("eav_fields", "eav_fields", values, labels, options))
+
+        if not options.get("no_all_none"):
+            print(
+                '<div style="text-align:center">'
+                '<input type="button" onclick=\'listbox_selectall("eav_fields",true)\' value="All" style="margin-top:1em" class="small_submit" />'
+                '<input type="button" onclick=\'listbox_selectall("eav_fields",false)\' value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
+                "</div>"
+            )
+        print("</fieldset>")
+
 
 # Function to create a nested defaultdict
 def nested_defaultdict():

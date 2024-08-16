@@ -23,6 +23,7 @@ import logging
 import psycopg2.extras
 import random
 from io import StringIO
+from collections import defaultdict
 import bigsdb.utils
 
 
@@ -52,7 +53,7 @@ class Datastore(object):
             self.logger = logger
         self.curate = curate
         self.username_cache = {}
-        self.cache = {}
+        self.cache = defaultdict(nested_defaultdict)
         self.user_dbs = {}
 
     def run_query(self, qry, values=[], options={}):
@@ -205,12 +206,57 @@ class Datastore(object):
             {"fetch": "all_arrayref", "slice": {}},
         )
 
+    def get_eav_field(self, field):
+        return self.run_query(
+            "SELECT * FROM eav_fields WHERE field=?", field, {"fetch": "row_hashref"}
+        )
+
     def get_eav_fieldnames(self, options={}):
         no_curate = " WHERE NOT no_curate" if options.get("curate") else ""
         return self.run_query(
             f"SELECT field FROM eav_fields{no_curate} ORDER BY " "field_order,field",
             None,
             {"fetch": "col_arrayref"},
+        )
+
+    def is_eav_field(self, field):
+        return self.run_query(
+            "SELECT EXISTS(SELECT * FROM eav_fields WHERE field=?)", field
+        )
+
+    def get_eav_field_table(self, field):
+        if not self.cache["eav_field_table"][field]:
+            eav_field = self.get_eav_field(field)
+            if not eav_field:
+                self.logger.error(f"EAV field {field} does not exist.")
+                return
+            type = eav_field.get("value_format")
+            table = self.get_eav_table(type)
+            if table:
+                self.cache["eav_field_table"][field] = table
+            else:
+                self.logger.error(f"EAV field {field} has invalid field type.")
+                return
+        return self.cache["eav_field_table"][field]
+
+    def get_eav_table(self, type):
+        table = {
+            "integer": "eav_int",
+            "float": "eav_float",
+            "text": "eav_text",
+            "date": "eav_date",
+            "boolean": "eav_boolean",
+        }
+        if not table.get(type):
+            self.logger.error("Invalid EAV type")
+            return
+        return table.get(type)
+
+    def get_eav_field_value(self, isolate_id, field):
+        table = self.get_eav_field_table(field)
+        return self.run_query(
+            f"SELECT value FROM {table} WHERE (isolate_id,field)=(?,?)",
+            [isolate_id, field],
         )
 
     def initiate_view(self, username=None, curate=False, set_id=None):
@@ -440,3 +486,7 @@ class Datastore(object):
 # %s. Rewrite so that the same SQL works with both.
 def replace_placeholders(query):
     return re.sub(r"\?", "%s", query)
+
+
+def nested_defaultdict():
+    return defaultdict(nested_defaultdict)

@@ -99,6 +99,7 @@ class PyExport(Plugin):
                 "no_all_none": 1,
             }
         )
+        self.print_eav_fields_fieldset({"no_all_none": 1})
         self.print_action_fieldset({"no_reset": 1})
         self.print_hidden(["db", "page", "name", "set_id"])
         self.end_form()
@@ -141,50 +142,75 @@ class PyExport(Plugin):
     def get_initiation_values(self):
         return {"jQuery.jstree": 1, "jQuery.multiselect": 1}
 
+    def __get_selected_eav_fields(self):
+        eav_fields = []
+        param_eav_fields = self.params.get("eav_fields", "").split("||")
+        for field in param_eav_fields:
+            if self.datastore.is_eav_field(field):
+                eav_fields.append(field)
+        return eav_fields
+
+    def __get_header(self):
+        param_fields = self.params.get("fields", "").split("||")
+        header = []
+        for field in param_fields:
+            if self.parser.is_field(field):
+                header.append(field)
+            elif "___" in field:  # Extended attribute
+                header.append(field.split("___")[1])
+        eav_fields = self.__get_selected_eav_fields()
+        header.extend(eav_fields)
+        return header
+
+    def __get_prov_fields(self):
+        param_fields = self.params.get("fields", "").split("||")
+        fields = []
+        for field in param_fields:
+            if self.parser.is_field(field):
+                fields.append(field)
+        return fields
+
     def run_job(self, job_id):
         view = self.system.get("view")
         ids = self.job_manager.get_job_isolates(job_id)
         table = self.datastore.create_temp_list_table_from_list("int", ids)
         outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
-        #        self.cache["extended_attributes"] = {}
-        #        fields = self.parser.get_field_list()
-        fields = []
         param_fields = self.params.get("fields", "").split("||")
-        header = []
-        for field in param_fields:
-            if self.parser.is_field(field):
-                fields.append(field)
-                header.append(field)
-            elif "___" in field:  # Extended attribute
-                header.append(field.split("___")[1])
-        if len(fields) == 0:
-            fields = ["id"]
+        header = self.__get_header()
+        fields = self.__get_prov_fields()
+
         qry = (
-            "SELECT "
+            f"SELECT {'id,' if 'id' not in fields else ''}"
             + ",".join(fields)
             + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
         )
         results = self.datastore.run_query(
             qry, None, {"fetch": "all_arrayref", "slice": {}}
         )
+        eav_fields = self.__get_selected_eav_fields()
         last_progress = 0
         total = len(results)
         with open(outfile, "w") as f:
             f.write("\t".join(header) + "\n")
             i = 0
             for record in results:
+                row_values = []
                 for field in param_fields:
-                    if field != fields[0]:
-                        f.write("\t")
-                        first_field = 0
                     if self.parser.is_field(field):
-                        f.write(str(record.get(field, "")))
+                        row_values.append(str(record.get(field, "")))
                     elif "___" in field:  # Extended attribute
                         ext_value = self.__get_extended_attribute_value(record, field)
-                        f.write(ext_value)
+                        row_values.append(ext_value)
+                for field in eav_fields:
+                    row_values.append(
+                        str(
+                            self.datastore.get_eav_field_value(record["id"], field)
+                            or ""
+                        )
+                    )
 
                 i += 1
-                f.write("\n")
+                f.write("\t".join(row_values) + "\n")
                 progress = int(80 * (i / total))
                 if progress > last_progress:
                     last_progress = progress

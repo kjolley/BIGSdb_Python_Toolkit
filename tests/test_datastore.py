@@ -63,6 +63,26 @@ class TestDatastore(unittest.TestCase):
                 all_have_type = False
         self.assertTrue(all_have_name and all_have_type)
 
+    def test_is_eav_field(self):
+        self.assertTrue(self.datastore.is_eav_field("Bexsero_reactivity"))
+        self.assertFalse(self.datastore.is_eav_field("country"))
+
+    def test_get_eav_table(self):
+        self.assertEqual(self.datastore.get_eav_table("text"), "eav_text")
+
+    def test_get_eav_field_table(self):
+        self.assertEqual(
+            self.datastore.get_eav_field_table("Bexsero_reactivity"), "eav_text"
+        )
+
+    def test_get_eav_field(self):
+        eav_field = self.datastore.get_eav_field("Bexsero_reactivity")
+        self.assertEqual(eav_field.get("value_format"), "text")
+
+    def test_get_eav_field_value(self):
+        value = self.datastore.get_eav_field_value(1, "Bexsero_reactivity")
+        self.assertEqual(value, "insufficient data")
+
     def test_isolates_with_seqbin(self):
         ids, labels = self.datastore.get_isolates_with_seqbin()
         self.assertEqual(len(ids), 3)
