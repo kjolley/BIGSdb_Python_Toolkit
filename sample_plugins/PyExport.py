@@ -77,8 +77,8 @@ class PyExport(Plugin):
         print(
             '<div class="box" id="queryform"><div class="scrollable">'
             "<p>Currently this is just a demonstration of a plugin that uses the "
-            "offline job manager. You can select isolate ids and the job will "
-            "get sent to the queue. When run, it will create a tab-delimited "
+            "offline job manager. You can select isolate ids and fields and the job "
+            "will get sent to the queue. When run, it will create a tab-delimited "
             "text file and an Excel file containing the primary metadata for "
             "each selected isolate record.</p>"
             "<p>New methods will be added later to support selecting specific fields, "
@@ -117,6 +117,12 @@ class PyExport(Plugin):
                 {
                     "message": f"The following isolates in your pasted list are invalid: {list_string}."
                 }
+            )
+            self.__print_interface()
+            return
+        if not self.params.get("fields") and not self.params.get("eav_fields"):
+            self.print_bad_status(
+                {"message": f"You need to select at least one field."}
             )
             self.__print_interface()
             return
@@ -178,9 +184,11 @@ class PyExport(Plugin):
         param_fields = self.params.get("fields", "").split("||")
         header = self.__get_header()
         fields = self.__get_prov_fields()
+        if "id" not in fields:
+            fields.insert(0, "id")
 
         qry = (
-            f"SELECT {'id,' if 'id' not in fields else ''}"
+            f"SELECT "
             + ",".join(fields)
             + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
         )
@@ -197,10 +205,10 @@ class PyExport(Plugin):
                 row_values = []
                 for field in param_fields:
                     if self.parser.is_field(field):
-                        row_values.append(str(record.get(field, "")))
+                        row_values.append(record.get(field, ""))
                     elif "___" in field:  # Extended attribute
                         ext_value = self.__get_extended_attribute_value(record, field)
-                        row_values.append(ext_value)
+                        row_values.append(ext_value or "")
                 for field in eav_fields:
                     row_values.append(
                         str(
@@ -210,7 +218,10 @@ class PyExport(Plugin):
                     )
 
                 i += 1
-                f.write("\t".join(row_values) + "\n")
+                f.write(
+                    "\t".join(self.__convert_to_string(value) for value in row_values)
+                    + "\n"
+                )
                 progress = int(80 * (i / total))
                 if progress > last_progress:
                     last_progress = progress
@@ -251,6 +262,14 @@ class PyExport(Plugin):
 
         if Path(f"{outfile}.gz").is_file():
             Path(outfile).unlink()
+
+    def __convert_to_string(self, value):
+        if value is None:
+            return ""
+        elif isinstance(value, list):
+            return ";".join(map(str, value))
+        else:
+            return str(value)
 
     def __get_extended_attribute_value(self, record, field):
         isolate_field, attribute = field.split("___")
