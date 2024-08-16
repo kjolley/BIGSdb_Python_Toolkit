@@ -26,6 +26,7 @@ from collections import defaultdict
 import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.job_manager import JobManager
+from bigsdb.prefstore import Prefstore
 from bigsdb.constants import DIRS, LOGS
 
 MAX_ISOLATES_DROPDOWN = 1000
@@ -103,12 +104,17 @@ class Plugin(BaseApplication):
         self.script_name = os.environ.get("SCRIPT_NAME", "") or "bigsdb.pl"
         self.username = self.args.get("username", "")
         self.email = self.args.get("email", "")
-        if self.system.get("dbtype", "") == "isolates":
-            self.datastore.initiate_view(
-                username=self.args.get("username"),
-                curate=self.args.get("curate", False),
-                set_id=self.get_set_id(),
-            )
+        self.datastore.initiate_view(
+            username=self.args.get("username"),
+            curate=self.args.get("curate", False),
+            set_id=self.get_set_id(),
+        )
+        self.prefstore = Prefstore(
+            data_connector=self.data_connector,
+            config=self.config,
+            logger=self.logger,
+        )
+        self.__initiate_prefs()
 
     def __read_arg_file(self, arg_file):
         full_path = self.config.get("secure_tmp_dir") + f"/{arg_file}"
@@ -136,6 +142,27 @@ class Plugin(BaseApplication):
             curate=self.params.get("curate"),
             set_id=self.params.get("set_id"),
         )
+
+    def __initiate_prefs(self):
+        self.set_pref_requirements()
+        guid = self.args.get("guid")
+        if self.system.get("dbtype", "") == "isolates":
+            if self.pref_requirements.get("analysis") or self.pref_requirements.get(
+                "query_field"
+            ):
+                self.locus_prefs = self.datastore.run_query(
+                    "SELECT id,query_field,analysis FROM loci",
+                    None,
+                    {"fetch": "all_hashref", "key": "id"},
+                )
+                user_locus_prefs = self.prefstore.get_all_locus_prefs(
+                    guid, self.system.get("db")
+                )
+                for prefs in user_locus_prefs:
+                    if prefs["action"] in ["query_field", "analysis"]:
+                        self.locus_prefs[prefs["locus"]][prefs["action"]] = (
+                            True if prefs["value"] == "true" else False
+                        )
 
     def is_curator(self):
         if self.username == None:
@@ -628,6 +655,9 @@ setTimeout(function(){{
                 "</div>"
             )
         print("</fieldset>")
+
+    def set_pref_requirements(self):
+        self.pref_requirements = {"analysis": 1, "query_field": 1}
 
 
 # Function to create a nested defaultdict
