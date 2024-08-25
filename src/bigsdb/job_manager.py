@@ -49,10 +49,10 @@ class JobManager(BaseApplication):
         self.system = system
         self.config = config
 
-        self.__init_logger(logger=logger)
-        self.__db_connect()
+        self._init_logger(logger=logger)
+        self._db_connect()
 
-    def __init_logger(self, logger=None):
+    def _init_logger(self, logger=None):
         if logger:
             self.logger = logger
             return
@@ -65,7 +65,7 @@ class JobManager(BaseApplication):
         f_handler.setFormatter(f_format)
         self.logger.addHandler(f_handler)
 
-    def __db_connect(self, options={}):
+    def _db_connect(self, options={}):
         if self.config.get("jobs_db") == None:
             raise ValueError("jobs_db not defined in bigsdb.conf")
         if options.get("reconnect"):
@@ -78,7 +78,7 @@ class JobManager(BaseApplication):
             password=self.config.get("dbpassword") or PASSWORD,
         )
 
-    def __has_ip_address_got_queued_jobs(self, ip_address):
+    def _has_ip_address_got_queued_jobs(self, ip_address):
         cursor = self.db.cursor()
         qry = "SELECT EXISTS(SELECT * FROM jobs WHERE (ip_address,status)=(%s,%s))"
         try:
@@ -87,7 +87,7 @@ class JobManager(BaseApplication):
             self.logger.error(f"{e} Query:{qry}")
         return cursor.fetchone()[0]
 
-    def __make_job_fingerprint(self, params):
+    def _make_job_fingerprint(self, params):
         key = ""
         for value in params:
             if value == None or value == "":
@@ -95,11 +95,11 @@ class JobManager(BaseApplication):
             key += str(value)
         return bigsdb.utils.get_md5_hash(key)
 
-    def __dict_to_string_sorted(self, d):
+    def _dict_to_string_sorted(self, d):
         sorted_keys = sorted(k for k in d if d[k] is not None)
         return "".join(str(d[k]) for k in sorted_keys)
 
-    def __jobs_require_login(self):
+    def _jobs_require_login(self):
         if self.system.get("jobs_require_login", "") == "no":
             return
         if not (
@@ -109,7 +109,7 @@ class JobManager(BaseApplication):
             return
         return True
 
-    def __get_duplicate_job_id(self, fingerprint=None, username=None, ip_address=None):
+    def _get_duplicate_job_id(self, fingerprint=None, username=None, ip_address=None):
         cursor = self.db.cursor()
         qry = (
             "SELECT id FROM jobs WHERE fingerprint=%s AND (status='started' OR "
@@ -117,7 +117,7 @@ class JobManager(BaseApplication):
         )
         check_ip_address = (
             self.system.get("read_access", "") == "public"
-            and not self.__jobs_require_login()
+            and not self._jobs_require_login()
         )
         qry += "ip_address=%s" if check_ip_address else "username=%s"
         try:
@@ -131,7 +131,7 @@ class JobManager(BaseApplication):
             return
         return row[0]
 
-    def __is_quota_exceeded(self, params):
+    def _is_quota_exceeded(self, params):
         cursor = self.db.cursor()
         if bigsdb.utils.is_integer(self.system.get("job_quota")):
             qry = (
@@ -162,22 +162,22 @@ class JobManager(BaseApplication):
             if job_count >= int(self.system.get("user_job_quota")):
                 return USER_QUOTA_EXCEEDED
 
-    def __get_status(self, params={}, fingerprint=None):
+    def _get_status(self, params={}, fingerprint=None):
         if params.get("mark_started"):
             return
-        duplicate_job = self.__get_duplicate_job_id(
+        duplicate_job = self._get_duplicate_job_id(
             fingerprint, params.get("username", ""), params.get("ip_address", "")
         )
-        quota_exceeded = self.__is_quota_exceeded(params)
+        quota_exceeded = self._is_quota_exceeded(params)
         if duplicate_job:
             status = f"rejected - duplicate job ({duplicate_job})"
         elif quota_exceeded:
-            status = self.__get_quota_status(quota_exceeded)
+            status = self._get_quota_status(quota_exceeded)
         else:
             status = "submitted"
         return status
 
-    def __get_quota_status(self, quota_status):
+    def _get_quota_status(self, quota_status):
         if quota_status == DBASE_QUOTA_EXCEEDED:
             plural = "" if self.system.get("job_quota") == 1 else "s"
             job_quota = self.system.get("job_quota")
@@ -215,7 +215,7 @@ class JobManager(BaseApplication):
         # priority on any new jobs from them. This will prevent a single user from
         # flooding the queue and preventing other user jobs from running.
 
-        if self.__has_ip_address_got_queued_jobs(params.get("ip_address")):
+        if self._has_ip_address_got_queued_jobs(params.get("ip_address")):
             priority += 2
         job_id = params.get("job_id") or bigsdb.utils.get_random()
 
@@ -240,7 +240,7 @@ class JobManager(BaseApplication):
         ]:
             params["parameters"].pop(key, None)
 
-        fingerprint = self.__make_job_fingerprint(
+        fingerprint = self._make_job_fingerprint(
             [
                 params.get("dbase_config"),
                 params.get("ip_address"),
@@ -249,10 +249,10 @@ class JobManager(BaseApplication):
                 bigsdb.utils.create_string_from_list(params.get("isolates", [])),
                 bigsdb.utils.create_string_from_list(params.get("profiles", [])),
                 bigsdb.utils.create_string_from_list(params.get("loci", [])),
-                self.__dict_to_string_sorted(params.get("parameters", {})),
+                self._dict_to_string_sorted(params.get("parameters", {})),
             ]
         )
-        status = self.__get_status(params, fingerprint)
+        status = self._get_status(params, fingerprint)
         cursor = self.db.cursor()
         qry = (
             "INSERT INTO jobs (id,dbase_config,username,email,ip_address,"
@@ -375,7 +375,7 @@ class JobManager(BaseApplication):
         if output_dict.get("description") == None:
             raise ValueError("description not passed.")
         if self.db.closed:
-            self.__db_connect({"reconnect": True})
+            self._db_connect({"reconnect": True})
         if output_dict.get("compress"):
             full_path = os.path.join(self.config["tmp_dir"], output_dict["filename"])
             if os.path.getsize(full_path) > (10 * 1024 * 1024):  # >10 MB
@@ -410,7 +410,7 @@ class JobManager(BaseApplication):
 
     def update_job_status(self, job_id, status_dict={}):
         if self.db.closed:
-            self.__db_connect({"reconnect": True})
+            self._db_connect({"reconnect": True})
         if self.db.closed:
             self._db_connect(reconnect=True)
 

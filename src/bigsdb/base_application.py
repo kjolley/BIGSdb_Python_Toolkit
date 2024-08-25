@@ -45,16 +45,16 @@ class BaseApplication(object):
         self.config_dir = config_dir
         self.dbase_config_dir = dbase_config_dir
         self.logger = logger
-        self.config = self.__read_config_file()
+        self.config = self._read_config_file()
         if testing:
             return
         if database == None:
             raise ValueError("No database parameter passed.")
         self.instance = database
-        self.__read_db_config_file()
-        self.__read_host_mapping_file()
-        self.__read_dbase_config_xml_file()
-        self.__set_system_overrides()
+        self._read_db_config_file()
+        self._read_host_mapping_file()
+        self._read_dbase_config_xml_file()
+        self._set_system_overrides()
         self.system["host"] = (
             host
             or self.system.get("host")
@@ -81,12 +81,12 @@ class BaseApplication(object):
         self.data_connector = DataConnector(
             system=self.system, config=self.config, logger=self.logger
         )
-        self.__db_connect()
-        self.__setup_datastore()
+        self._db_connect()
+        self._setup_datastore()
         if not options.get("no_user_db_needed", False):
             self.datastore.initiate_user_dbs()
 
-    def __read_config_file(self, filename=None):
+    def _read_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/bigsdb.conf"
         if not Path(filename).is_file():
             raise ValueError(f"Main config file {filename} does not exist.")
@@ -109,7 +109,7 @@ class BaseApplication(object):
         dict["ref_db"] = dict.get("ref_db", dict.get("refdb"))
         return dict
 
-    def __read_db_config_file(self, filename=None):
+    def _read_db_config_file(self, filename=None):
         filename = filename or f"{self.config_dir}/db.conf"
         if not Path(filename).is_file():
             return
@@ -123,7 +123,7 @@ class BaseApplication(object):
                 value = int(value)
             self.config[key] = value
 
-    def __read_host_mapping_file(self, filename=None):
+    def _read_host_mapping_file(self, filename=None):
         filename = filename or f"{self.config_dir}/host_mapping.conf"
         self.config["host_map"] = {}
         if not Path(filename).is_file():
@@ -135,7 +135,7 @@ class BaseApplication(object):
                     if len(list) >= 2:
                         self.config["host_map"][list[0].strip()] = list[1].strip()
 
-    def __read_dbase_config_xml_file(self, filename=None):
+    def _read_dbase_config_xml_file(self, filename=None):
         filename = filename or f"{self.dbase_config_dir}/{self.instance}/config.xml"
         if Path(filename).is_file():
             self.parser = XMLParser()
@@ -144,7 +144,7 @@ class BaseApplication(object):
         else:
             raise ValueError(f"Database config file {filename} does not exist.")
 
-    def __set_system_overrides(self, filename=None):
+    def _set_system_overrides(self, filename=None):
         filename = (
             filename or f"{self.dbase_config_dir}/{self.instance}/system.overrides"
         )
@@ -165,7 +165,7 @@ class BaseApplication(object):
                 value = date(value)
             self.system[key] = value
 
-    def __db_connect(self):
+    def _db_connect(self):
         self.db = self.data_connector.get_connection(
             dbase_name=self.system["db"],
             host=self.system["host"],
@@ -174,7 +174,7 @@ class BaseApplication(object):
             password=self.system["password"],
         )
 
-    def __setup_datastore(self):
+    def _setup_datastore(self):
         self.datastore = Datastore(
             db=self.db,
             data_connector=self.data_connector,

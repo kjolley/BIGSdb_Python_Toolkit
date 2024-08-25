@@ -92,16 +92,16 @@ $(function () {
             'page=plugin&amp;name=PyDatabaseFields">Reset default order</a>.'
             "</p>"
         )
-        self.__print_provenance_fields()
+        self._print_provenance_fields()
         eav_fields = self.datastore.get_eav_fieldnames()
         if len(eav_fields):
-            self.__print_eav_fields()
+            self._print_eav_fields()
         print("</div></div>")
 
     def get_initiation_values(self):
         return {"jQuery.tablesort": 1}
 
-    def __print_provenance_fields(self):
+    def _print_provenance_fields(self):
         is_curator = self.is_curator()
         field_list = self.parser.get_field_list({"no_curate_only": not is_curator})
 
@@ -130,7 +130,7 @@ $(function () {
             multiple = " (multiple)" if att.get("multiple", "") == "yes" else ""
             type = att["type"]
             print(f"<td>{type}{multiple}</td><td>")
-            self.__print_allowed_values(field)
+            self._print_allowed_values(field)
             print("</td>")
             required_allowed = set(
                 ["yes", "no", "expected", "genome_required", "genome_expected"]
@@ -171,7 +171,7 @@ $(function () {
                 td = 2 if td == 1 else 1
         print("</tbody></table>")
 
-    def __print_eav_fields(self):
+    def _print_eav_fields(self):
         field_name = self.system.get("eav_fields", "secondary metadata")
         uc_field_name = field_name.capitalize()
         icon = self.system.get("eav_field_icon", "fas fa-microscope")
@@ -262,7 +262,7 @@ $(function () {
                 td = 2 if td == 1 else 1
             print("</tbody></table>")
 
-    def __print_allowed_values(self, field):
+    def _print_allowed_values(self, field):
         att = self.parser.get_field_attributes(field)
         if att.get("optlist", "no") == "yes":
             option_list = self.parser.get_field_option_list(field)

@@ -67,11 +67,11 @@ class PyExport(Plugin):
         if self.has_set_changed():
             return
         if self.params.get("submit"):
-            self.__submit()
+            self._submit()
             return
-        self.__print_interface()
+        self._print_interface()
 
-    def __print_interface(self):
+    def _print_interface(self):
         set_id = self.get_set_id()
         selected_ids = self.get_selected_ids()
         print(
@@ -105,11 +105,11 @@ class PyExport(Plugin):
         self.end_form()
         print("</div></div>")
 
-    def __submit(self):
+    def _submit(self):
         ids, invalid_ids = self.process_selected_ids()
         if len(ids) == 0:
             self.print_bad_status({"message": "No valid ids have been selected!"})
-            self.__print_interface()
+            self._print_interface()
             return
         if len(invalid_ids):
             list_string = ", ".join(map(str, invalid_ids))
@@ -118,13 +118,13 @@ class PyExport(Plugin):
                     "message": f"The following isolates in your pasted list are invalid: {list_string}."
                 }
             )
-            self.__print_interface()
+            self._print_interface()
             return
         if not self.params.get("fields") and not self.params.get("eav_fields"):
             self.print_bad_status(
                 {"message": f"You need to select at least one field."}
             )
-            self.__print_interface()
+            self._print_interface()
             return
         attributes = self.get_attributes()
         if self.args.get("curate"):
@@ -148,7 +148,7 @@ class PyExport(Plugin):
     def get_initiation_values(self):
         return {"jQuery.jstree": 1, "jQuery.multiselect": 1}
 
-    def __get_selected_eav_fields(self):
+    def _get_selected_eav_fields(self):
         eav_fields = []
         param_eav_fields = self.params.get("eav_fields", "").split("||")
         for field in param_eav_fields:
@@ -156,7 +156,7 @@ class PyExport(Plugin):
                 eav_fields.append(field)
         return eav_fields
 
-    def __get_header(self):
+    def _get_header(self):
         param_fields = self.params.get("fields", "").split("||")
         header = []
         for field in param_fields:
@@ -164,11 +164,11 @@ class PyExport(Plugin):
                 header.append(field)
             elif "___" in field:  # Extended attribute
                 header.append(field.split("___")[1])
-        eav_fields = self.__get_selected_eav_fields()
+        eav_fields = self._get_selected_eav_fields()
         header.extend(eav_fields)
         return header
 
-    def __get_prov_fields(self):
+    def _get_prov_fields(self):
         param_fields = self.params.get("fields", "").split("||")
         fields = []
         for field in param_fields:
@@ -182,8 +182,8 @@ class PyExport(Plugin):
         table = self.datastore.create_temp_list_table_from_list("int", ids)
         outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
         param_fields = self.params.get("fields", "").split("||")
-        header = self.__get_header()
-        fields = self.__get_prov_fields()
+        header = self._get_header()
+        fields = self._get_prov_fields()
         if "id" not in fields:
             fields.insert(0, "id")
 
@@ -195,7 +195,7 @@ class PyExport(Plugin):
         results = self.datastore.run_query(
             qry, None, {"fetch": "all_arrayref", "slice": {}}
         )
-        eav_fields = self.__get_selected_eav_fields()
+        eav_fields = self._get_selected_eav_fields()
         last_progress = 0
         total = len(results)
         with open(outfile, "w") as f:
@@ -207,7 +207,7 @@ class PyExport(Plugin):
                     if self.parser.is_field(field):
                         row_values.append(record.get(field, ""))
                     elif "___" in field:  # Extended attribute
-                        ext_value = self.__get_extended_attribute_value(record, field)
+                        ext_value = self._get_extended_attribute_value(record, field)
                         row_values.append(ext_value or "")
                 for field in eav_fields:
                     row_values.append(
@@ -219,7 +219,7 @@ class PyExport(Plugin):
 
                 i += 1
                 f.write(
-                    "\t".join(self.__convert_to_string(value) for value in row_values)
+                    "\t".join(self._convert_to_string(value) for value in row_values)
                     + "\n"
                 )
                 progress = int(80 * (i / total))
@@ -263,7 +263,7 @@ class PyExport(Plugin):
         if Path(f"{outfile}.gz").is_file():
             Path(outfile).unlink()
 
-    def __convert_to_string(self, value):
+    def _convert_to_string(self, value):
         if value is None:
             return ""
         elif isinstance(value, list):
@@ -271,7 +271,7 @@ class PyExport(Plugin):
         else:
             return str(value)
 
-    def __get_extended_attribute_value(self, record, field):
+    def _get_extended_attribute_value(self, record, field):
         isolate_field, attribute = field.split("___")
         if record.get(isolate_field, "") == "":
             return ""

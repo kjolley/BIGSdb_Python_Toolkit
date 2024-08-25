@@ -44,7 +44,7 @@ class XMLParser(object):
             for attribute in field.attrib:
                 if field_name not in self.attributes:
                     self.attributes[field_name] = {}
-                self.attributes[field_name][attribute] = self.__process_value(
+                self.attributes[field_name][attribute] = self._process_value(
                     field.attrib[attribute]
                 )
             if "optlist" in field.attrib and field.attrib["optlist"] == "yes":
@@ -79,17 +79,17 @@ class XMLParser(object):
         return fields
 
     def get_all_field_attributes(self):
-        self.__set_prefix_fields()
+        self._set_prefix_fields()
         return self.attributes
 
     def get_field_attributes(self, field):
-        self.__set_prefix_fields()
+        self._set_prefix_fields()
         return self.attributes[field]
 
     def get_field_option_list(self, field):
         list = []
         if "values" in self.attributes[field]:
-            special_values = self.__get_special_optlist_values(
+            special_values = self._get_special_optlist_values(
                 self.attributes[field]["values"]
             )
             for value in special_values:
@@ -101,7 +101,7 @@ class XMLParser(object):
             list = sorted(list, key=collator.sort_key)
         return list
 
-    def __set_prefix_fields(self):
+    def _set_prefix_fields(self):
         if self.prefixes_already_defined == True:
             return
         for field_name in self.fields:
@@ -124,14 +124,14 @@ class XMLParser(object):
 
         self.prefixes_already_defined = True
 
-    def __process_value(self, value):
+    def _process_value(self, value):
         if value == "CURRENT_DATE":
             return bigsdb.utils.get_datestamp()
         if value == "CURRENT_YEAR":
             return bigsdb.utils.get_current_year()
         return value
 
-    def __get_special_optlist_values(self, values):
+    def _get_special_optlist_values(self, values):
         if values == "COUNTRIES":
             return bigsdb.constants.COUNTRIES.keys()
 

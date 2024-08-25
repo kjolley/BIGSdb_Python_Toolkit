@@ -46,7 +46,7 @@ class Plugin(BaseApplication):
         if not retrieving_attributes:
             if arg_file and database == None:
                 raise ValueError("No database parameter passed.")
-        self.__init_logger(logger=logger)
+        self._init_logger(logger=logger)
         super(Plugin, self).__init__(
             database=database,
             config_dir=config_dir,
@@ -55,17 +55,17 @@ class Plugin(BaseApplication):
             testing=retrieving_attributes,
         )
         if arg_file != None:
-            self.__read_arg_file(arg_file)
+            self._read_arg_file(arg_file)
         if retrieving_attributes:
             return
         self.cache = defaultdict(nested_defaultdict)
         att = self.get_attributes()
         if "offline_jobs" in att.get("requires", ""):
-            self.__initiate_job_manager()
+            self._initiate_job_manager()
         if run_job:
-            self.__initiate_job(run_job)
+            self._initiate_job(run_job)
         else:
-            self.__initiate()
+            self._initiate()
 
     # Override the following functions in subclass
     def get_attributes(self):
@@ -86,7 +86,7 @@ class Plugin(BaseApplication):
     def run_job(self, job_id):
         pass
 
-    def __init_logger(self, logger=None):
+    def _init_logger(self, logger=None):
         if logger:
             self.logger = logger
             return
@@ -99,7 +99,7 @@ class Plugin(BaseApplication):
         f_handler.setFormatter(f_format)
         self.logger.addHandler(f_handler)
 
-    def __initiate(self):
+    def _initiate(self):
         self.params = self.args.get("cgi_params")
         self.script_name = os.environ.get("SCRIPT_NAME", "") or "bigsdb.pl"
         self.username = self.args.get("username", "")
@@ -114,9 +114,9 @@ class Plugin(BaseApplication):
             config=self.config,
             logger=self.logger,
         )
-        self.__initiate_prefs()
+        self._initiate_prefs()
 
-    def __read_arg_file(self, arg_file):
+    def _read_arg_file(self, arg_file):
         full_path = self.config.get("secure_tmp_dir") + f"/{arg_file}"
         if not os.path.isfile(full_path):
             self.logger.error(f"Argument file {full_path} does not exist.")
@@ -125,7 +125,7 @@ class Plugin(BaseApplication):
         with open(full_path, "r") as f:
             self.args = json.load(f)
 
-    def __initiate_job_manager(self):
+    def _initiate_job_manager(self):
         self.job_manager = JobManager(
             data_connector=self.data_connector,
             system=self.system,
@@ -133,7 +133,7 @@ class Plugin(BaseApplication):
             logger=self.logger,
         )
 
-    def __initiate_job(self, job_id):
+    def _initiate_job(self, job_id):
         self.params = self.job_manager.get_job_params(job_id)
         job = self.job_manager.get_job(job_id)
 
@@ -143,7 +143,7 @@ class Plugin(BaseApplication):
             set_id=self.params.get("set_id"),
         )
 
-    def __initiate_prefs(self):
+    def _initiate_prefs(self):
         self.set_pref_requirements()
         guid = self.args.get("guid")
         if self.system.get("dbtype", "") == "isolates":
@@ -249,7 +249,7 @@ class Plugin(BaseApplication):
                 if len(self.cache.get("set_list", [])):
                     return self.cache.get("set_list")
 
-    def __get_query(self, query_file):
+    def _get_query(self, query_file):
         view = self.system.get("view")  # TODO Will need to initiate view
         if query_file == None:
             qry = f"SELECT * FROM {view} WHERE new_version IS NULL ORDER BY id"
@@ -286,7 +286,7 @@ class Plugin(BaseApplication):
             qry = re.sub(r"([\s\(])date_entered", r"\1view.date_entered", qry)
         return qry
 
-    def __get_ids_from_query(self, qry):
+    def _get_ids_from_query(self, qry):
         if qry == None:
             return []
         qry = re.sub(r"ORDER\sBY.*$", "", qry)
@@ -302,8 +302,8 @@ class Plugin(BaseApplication):
         if self.params.get("isolate_id"):
             selected_ids = self.params.get("isolate_id")
         elif query_file != None:
-            qry = self.__get_query(query_file)
-            selected_ids = self.__get_ids_from_query(qry)
+            qry = self._get_query(query_file)
+            selected_ids = self._get_ids_from_query(qry)
         else:
             selected_ids = []
         return selected_ids
@@ -311,7 +311,7 @@ class Plugin(BaseApplication):
     def process_selected_ids(self):
         selected = self.params.get("isolate_id")
         ids = selected if selected else []
-        pasted_cleaned_ids, invalid_ids = self.__get_ids_from_pasted_list()
+        pasted_cleaned_ids, invalid_ids = self._get_ids_from_pasted_list()
         ids.extend(pasted_cleaned_ids)
         if len(ids):
             id_set = set(ids)  # Convert to set to remove duplicates
@@ -516,7 +516,7 @@ setTimeout(function(){{
         )
         return buffer
 
-    def __get_ids_from_pasted_list(self):
+    def _get_ids_from_pasted_list(self):
         integer_ids = []
         cleaned_ids = []
         invalid_ids = []
@@ -594,7 +594,7 @@ setTimeout(function(){{
         if isinstance(items[0], dict):  # Check if items are optgroups
             options_html = "".join(
                 [
-                    self.__generate_optgroup_html(optgroup, labels, default)
+                    self._generate_optgroup_html(optgroup, labels, default)
                     for optgroup in items
                 ]
             )
@@ -607,7 +607,7 @@ setTimeout(function(){{
             )
         return f'<select name="{name}" id="{id}" multiple="true" size="{size}">{options_html}</select>'
 
-    def __generate_optgroup_html(self, optgroup, labels, default):
+    def _generate_optgroup_html(self, optgroup, labels, default):
         name = optgroup["name"]
         values = optgroup["values"]
         options = "".join(

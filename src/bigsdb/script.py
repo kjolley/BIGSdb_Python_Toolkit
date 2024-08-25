@@ -36,7 +36,7 @@ class Script(BaseApplication):
         logger=None,
         testing=False,
     ):
-        self.__init_logger(logger=logger)
+        self._init_logger(logger=logger)
 
         super(Script, self).__init__(
             database=database,
@@ -49,7 +49,7 @@ class Script(BaseApplication):
             logger=self.logger,
         )
 
-    def __init_logger(self, logger=None):
+    def _init_logger(self, logger=None):
         if logger:
             self.logger = logger
             return

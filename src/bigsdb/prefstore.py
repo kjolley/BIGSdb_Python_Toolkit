@@ -30,13 +30,13 @@ class Prefstore:
         config=None,
         logger=None,
     ):
-        self.__check_required_parameters(data_connector=data_connector, config=config)
+        self._check_required_parameters(data_connector=data_connector, config=config)
         self.data_connector = data_connector
         self.config = config
-        self.__init_logger(logger=logger)
-        self.__db_connect()
+        self._init_logger(logger=logger)
+        self._db_connect()
 
-    def __init_logger(self, logger=None):
+    def _init_logger(self, logger=None):
         if logger:
             self.logger = logger
             return
@@ -49,7 +49,7 @@ class Prefstore:
         f_handler.setFormatter(f_format)
         self.logger.addHandler(f_handler)
 
-    def __db_connect(self, options={}):
+    def _db_connect(self, options={}):
         if self.config.get("prefs_db") == None:
             raise ValueError("prefs_db not defined in bigsdb.conf")
         if options.get("reconnect"):
@@ -62,7 +62,7 @@ class Prefstore:
             password=self.config.get("dbpassword") or PASSWORD,
         )
 
-    def __check_required_parameters(self, **kwargs):
+    def _check_required_parameters(self, **kwargs):
         for key, value in kwargs.items():
             if value is None:
                 raise ValueError(f"Parameter '{key}' has not been passed.")

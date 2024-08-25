@@ -292,9 +292,7 @@ class TestDatastore(unittest.TestCase):
         # Read BIGSdb config file
         conf_file = f"{dir}/config_files/bigsdb.conf"
         cls.application = BaseApplication(testing=True)
-        cls.config = cls.application._BaseApplication__read_config_file(
-            filename=conf_file
-        )
+        cls.config = cls.application._read_config_file(filename=conf_file)
         cls.config["host_map"] = {}
 
         # Read database config

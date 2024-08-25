@@ -323,10 +323,10 @@ class Datastore(object):
             if curate:
                 status = user_info.get("status")
 
-                def __admin():
+                def _admin():
                     return [ALL_ISOLATES]
 
-                def __submitter():
+                def _submitter():
                     return [
                         OWN_SUBMITTED_ISOLATES,
                         OWN_PRIVATE_ISOLATES,
@@ -334,10 +334,10 @@ class Datastore(object):
                         PRIVATE_ISOLATES_FROM_SAME_USER_GROUP,
                     ]
 
-                def __private_submitter():
+                def _private_submitter():
                     return [OWN_PRIVATE_ISOLATES, PRIVATE_ISOLATES_FROM_SAME_USER_GROUP]
 
-                def __curator():
+                def _curator():
                     user_terms = [
                         PUBLIC_ISOLATES,
                         OWN_PRIVATE_ISOLATES,
@@ -349,10 +349,10 @@ class Datastore(object):
                     return user_terms
 
                 dispatch_table = {
-                    "admin": __admin,
-                    "submitter": __submitter,
-                    "private_submitter": __private_submitter,
-                    "curator": __curator,
+                    "admin": _admin,
+                    "submitter": _submitter,
+                    "private_submitter": _private_submitter,
+                    "curator": _curator,
                 }
                 if status == "submitter":
                     only_private = self.run_query(
