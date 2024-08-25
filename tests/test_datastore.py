@@ -116,6 +116,51 @@ class TestDatastore(unittest.TestCase):
         self.assertTrue(2 in exists)
         self.assertFalse(1200 in exists)
 
+    def test_get_loci(self):
+        loci = self.datastore.get_loci()
+        self.assertEqual(len(loci), 7)
+        self.assertTrue("abcZ" in loci)
+        prefs = {
+            "query_field_loci": {
+                "abcZ": True,
+                "adk": True,
+                "aroE": True,
+                "fumC": True,
+                "gdh": True,
+                "pdhC": False,
+                "pgm": False,
+            },
+            "analysis_loci": {
+                "abcZ": True,
+                "adk": True,
+                "aroE": False,
+                "fumC": True,
+                "gdh": True,
+                "pdhC": True,
+                "pgm": True,
+            },
+            "query_field_schemes": {1: True},
+            "analysis_schemes": {1: True},
+        }
+        self.datastore.update_prefs(prefs)
+        loci = self.datastore.get_loci({"query_pref": 1})
+        self.assertEqual(len(loci), 5)
+        self.assertTrue("abcZ" in loci)
+        self.assertFalse("pgm" in loci)
+        prefs["query_field_schemes"] = {1: False}
+        self.datastore.update_prefs(prefs)
+        loci = self.datastore.get_loci({"query_pref": 1})
+        self.assertEqual(len(loci), 0)
+        loci = self.datastore.get_loci({"analysis_pref": 1})
+        self.assertEqual(len(loci), 6)
+        self.assertTrue("abcZ" in loci)
+        self.assertTrue("pgm" in loci)
+        self.assertFalse("aroE" in loci)
+        prefs["analysis_schemes"] = {1: False}
+        self.datastore.update_prefs(prefs)
+        loci = self.datastore.get_loci({"analysis_pref": 1})
+        self.assertEqual(len(loci), 0)
+
     def test_run_query(self):
         list = self.datastore.run_query(
             "SELECT id FROM isolates", None, {"fetch": "col_arrayref"}
