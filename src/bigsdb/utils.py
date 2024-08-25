@@ -24,6 +24,7 @@ import hashlib
 import xlsxwriter
 from datetime import datetime
 from itertools import islice
+from collections import defaultdict
 
 
 def get_datestamp():
@@ -213,3 +214,9 @@ def text2excel(text_file, options={}):
 
     workbook.close()
     return excel_file
+
+
+def convert_to_defaultdict(d):
+    if isinstance(d, dict):
+        return defaultdict(dict, {k: convert_to_defaultdict(v) for k, v in d.items()})
+    return d

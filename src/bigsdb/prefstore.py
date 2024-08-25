@@ -79,3 +79,16 @@ class Prefstore:
         except Exception as e:
             self.logger.error(f"{e} Query:{qry}")
         return [dict(row) for row in cursor.fetchall()]
+
+    def get_all_scheme_prefs(self, guid, dbname):
+        if not guid:
+            self.logger.error("No guid passed.")
+            return {}
+        prefs = {}
+        qry = "SELECT scheme_id,action,value FROM scheme WHERE (guid,dbase)=(%s,%s)"
+        cursor = self.db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        try:
+            cursor.execute(qry, [guid, dbname])
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+        return [dict(row) for row in cursor.fetchall()]

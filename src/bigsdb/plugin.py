@@ -150,19 +150,40 @@ class Plugin(BaseApplication):
             if self.pref_requirements.get("analysis") or self.pref_requirements.get(
                 "query_field"
             ):
-                self.locus_prefs = self.datastore.run_query(
+                locus_prefs = self.datastore.run_query(
                     "SELECT id,query_field,analysis FROM loci",
                     None,
-                    {"fetch": "all_hashref", "key": "id"},
+                    {"fetch": "all_arrayref", "slice": {}},
                 )
+                self.prefs = defaultdict(nested_defaultdict)
+                for locus in locus_prefs:
+                    for action in ["query_field", "analysis"]:
+                        self.prefs[action + "_loci"][locus["id"]] = locus[action]
                 user_locus_prefs = self.prefstore.get_all_locus_prefs(
                     guid, self.system.get("db")
                 )
                 for prefs in user_locus_prefs:
                     if prefs["action"] in ["query_field", "analysis"]:
-                        self.locus_prefs[prefs["locus"]][prefs["action"]] = (
+                        self.prefs[prefs["action"] + "_loci"][prefs["locus"]] = (
                             True if prefs["value"] == "true" else False
                         )
+                scheme_prefs = self.datastore.run_query(
+                    "SELECT id,query_field,analysis FROM schemes",
+                    None,
+                    {"fetch": "all_arrayref", "slice": {}},
+                )
+                for scheme in scheme_prefs:
+                    for action in ["query_field", "analysis"]:
+                        self.prefs[action + "_schemes"][scheme["id"]] = scheme[action]
+                user_scheme_prefs = self.prefstore.get_all_scheme_prefs(
+                    guid, self.system.get("db")
+                )
+                for prefs in user_scheme_prefs:
+                    if prefs["action"] in ["query_field", "analysis"]:
+                        self.prefs[prefs["action"] + "_schemes"][prefs["scheme_id"]] = (
+                            True if prefs["value"] == "true" else False
+                        )
+                self.datastore.update_prefs(self.prefs)
 
     def is_curator(self):
         if self.username == None:

@@ -104,6 +104,7 @@ class PyExport(Plugin):
         self.print_hidden(["db", "page", "name", "set_id"])
         self.end_form()
         print("</div></div>")
+        loci = self.datastore.get_loci({"analysis_pref": 1})
 
     def __submit(self):
         ids, invalid_ids = self.process_selected_ids()

@@ -54,6 +54,7 @@ class Datastore(object):
         self.curate = curate
         self.username_cache = {}
         self.cache = defaultdict(nested_defaultdict)
+        self.prefs = defaultdict(nested_defaultdict)
         self.user_dbs = {}
 
     def run_query(self, qry, values=[], options={}):
@@ -480,6 +481,63 @@ class Datastore(object):
                 db.rollback()
                 raise Exception("Cannot put data into temp table")
         return table
+
+    def get_loci(self, options={}):
+        defined_clause = (
+            "WHERE dbase_name IS NOT NULL OR reference_sequence IS NOT NULL"
+            if options.get("seq_defined")
+            else ""
+        )
+
+        set_clause = ""
+        if options.get("set_id"):
+            set_clause = "AND" if defined_clause else "WHERE"
+            set_clause += (
+                f" (id IN (SELECT locus FROM scheme_members WHERE scheme_id IN "
+                f"(SELECT scheme_id FROM set_schemes WHERE set_id={options['set_id']})) "
+                f"OR id IN (SELECT locus FROM set_loci WHERE set_id={options['set_id']}))"
+            )
+
+        if any(options.get(key) for key in ["query_pref", "analysis_pref"]):
+            qry = (
+                "SELECT id, scheme_id FROM loci LEFT JOIN scheme_members ON loci.id = "
+                f"scheme_members.locus {defined_clause} {set_clause}"
+            )
+            if not options.get("do_not_order"):
+                qry += (
+                    " ORDER BY scheme_members.scheme_id, scheme_members.field_order, id"
+                )
+        else:
+            qry = f"SELECT id FROM loci {defined_clause} {set_clause}"
+            if not options.get("do_not_order"):
+                qry += " ORDER BY id"
+
+        query_loci = []
+        data = self.run_query(qry, None, {"fetch": "all_arrayref"})
+        for row in data:
+            if options.get("query_pref") and (
+                not self.prefs["query_field_loci"].get(row[0])
+                or (
+                    row[1] is not None
+                    and not self.prefs["query_field_schemes"].get(row[1])
+                )
+            ):
+                continue
+            if options.get("analysis_pref") and (
+                not self.prefs["analysis_loci"].get(row[0])
+                or (
+                    row[1] is not None
+                    and not self.prefs["analysis_schemes"].get(row[1])
+                )
+            ):
+                continue
+            query_loci.append(row[0])
+
+        query_loci = list(set(query_loci))
+        return query_loci
+
+    def update_prefs(self, prefs):
+        self.prefs = bigsdb.utils.convert_to_defaultdict(prefs)
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
