@@ -539,6 +539,28 @@ class Datastore(object):
     def update_prefs(self, prefs):
         self.prefs = bigsdb.utils.convert_to_defaultdict(prefs)
 
+    def is_locus(self, id, options={}):
+        if id is None:
+            return None
+        key = options.get("set_id", "All")
+        if key not in self.cache["locus_hash"]:
+            loci = self.get_loci(
+                {"do_not_order": True, "set_id": options.get("set_id")}
+            )
+            self.cache["locus_hash"][key] = {locus: 1 for locus in loci}
+        if id in self.cache["locus_hash"][key]:
+            return 1
+        return None
+
+    def get_set_locus_real_id(self, locus, set_id):
+        qry = "SELECT locus FROM set_loci WHERE set_name=%s AND set_id=%s"
+        real_id = self.run_query(
+            qry,
+            [locus, set_id],
+            {"fetch": "row_array", "cache": "get_set_locus_real_id"},
+        )
+        return real_id if real_id else locus
+
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.

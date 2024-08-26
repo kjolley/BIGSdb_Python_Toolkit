@@ -22,9 +22,11 @@ import os
 import random
 import hashlib
 import xlsxwriter
+import re
 from datetime import datetime
 from itertools import islice
 from collections import defaultdict
+from typing import List, Dict
 
 
 def get_datestamp():
@@ -220,3 +222,12 @@ def convert_to_defaultdict(d):
     if isinstance(d, dict):
         return defaultdict(dict, {k: convert_to_defaultdict(v) for k, v in d.items()})
     return d
+
+
+def dictionary_sort(values: List[str], labels: Dict[str, str]) -> List[str]:
+    def normalize(label: str) -> str:
+        return re.sub(r"[\W_]+", "", label.lower())
+
+    unique_values = list(set(values))
+    sorted_values = sorted(unique_values, key=lambda x: normalize(labels[x]))
+    return sorted_values

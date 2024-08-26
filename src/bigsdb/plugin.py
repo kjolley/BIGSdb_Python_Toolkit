@@ -27,7 +27,7 @@ import bigsdb.utils
 from bigsdb.base_application import BaseApplication
 from bigsdb.job_manager import JobManager
 from bigsdb.prefstore import Prefstore
-from bigsdb.constants import DIRS, LOGS
+from bigsdb.constants import DIRS, LOGS, LOCUS_PATTERN
 
 MAX_ISOLATES_DROPDOWN = 1000
 
@@ -671,14 +671,304 @@ setTimeout(function(){{
         if not options.get("no_all_none"):
             print(
                 '<div style="text-align:center">'
-                '<input type="button" onclick=\'listbox_selectall("eav_fields",true)\' value="All" style="margin-top:1em" class="small_submit" />'
-                '<input type="button" onclick=\'listbox_selectall("eav_fields",false)\' value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
+                '<input type="button" onclick=\'listbox_selectall("eav_fields",true)\' '
+                'value="All" style="margin-top:1em" class="small_submit" />'
+                '<input type="button" onclick=\'listbox_selectall("eav_fields",false)\' '
+                'value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
                 "</div>"
             )
         print("</fieldset>")
 
+    def print_isolates_locus_fieldset(self, options):
+        print('<fieldset id="locus_fieldset" style="float:left"><legend>Loci</legend>')
+        analysis_pref = options.get("analysis_pref", 1)
+        locus_list, locus_labels = self.get_field_selection_list(
+            {
+                "loci": 1,
+                "no_list_by_common_name": 1,
+                "analysis_pref": analysis_pref,
+                "query_pref": 0,
+                "sort_labels": 1,
+            }
+        )
+
+        if locus_list:
+            print('<div style="float:left">')
+            size = options.get("size", 8)
+            list_box_size = size - 0.2
+
+            try:
+                print(
+                    self.scrolling_list(
+                        name="locus",
+                        id="locus",
+                        items=locus_list,
+                        labels=locus_labels,
+                        options={
+                            "size": size,
+                            "default": self.params.get("locus", []),
+                        },
+                    )
+                )
+            except Exception as e:
+                print(f"Error generating list: {e}")
+
+            print("</div>")
+
+            if options.get("locus_paste_list"):
+                display = "block" if self.params.get("locus_paste_list") else "none"
+                print(
+                    f'<div id="locus_paste_list_div" style="float:left; display:{display}">'
+                )
+
+                default = self.params.get("locus_paste_list", "")
+                print(
+                    '<textarea name="locus_paste_list" id="locus_paste_list" '
+                    f'style="height:{list_box_size}em" '
+                    'placeholder="Paste list of locus primary names (one per line)...">'
+                )
+                if default:
+                    print(default, end="")
+
+                print("</textarea>")
+
+                print("</div>")
+
+            print('<div style="clear:both"></div>')
+            print('<div style="text-align:center">')
+            if not options.get("no_all_none"):
+                print(
+                    '<input type="button" onclick=\'listbox_selectall("locus",true)\' '
+                    'value="All" style="margin-top:1em" class="small_submit" />'
+                )
+                print(
+                    '<input type="button" onclick=\'listbox_selectall("locus",false)\' '
+                    'value="None" style="margin:1em 0 0 0.2em" class="small_submit" />'
+                )
+
+            if options.get("locus_paste_list"):
+                show_button_display = (
+                    "none" if self.params.get("locus_paste_list") else "display"
+                )
+                hide_button_display = (
+                    "display" if self.params.get("locus_paste_list") else "none"
+                )
+                print(
+                    '<input type="button" id="locus_list_show_button" '
+                    "onclick='locus_list_show()' value=\"Paste list\" "
+                    f'style="margin:1em 0 0 0.2em;display:{show_button_display}" '
+                    'class="small_submit" />'
+                )
+                print(
+                    '<input type="button" id="locus_list_hide_button" '
+                    "onclick='locus_list_hide()' value=\"Hide list\" "
+                    f'style="margin:1em 0 0 0.2em;display:{hide_button_display}" '
+                    'class="small_submit" />'
+                )
+
+            print("</div>")
+        else:
+            print("No loci available<br />for analysis")
+        print("</fieldset>")
+
+    def get_field_selection_list(self, options={}):
+        options.setdefault("query_pref", 1)
+        options.setdefault("analysis_pref", 0)
+        values = []
+
+        if options.get("isolate_fields"):
+            raise NotImplementedError
+
+        if options.get("management_fields"):
+            raise NotImplementedError
+
+        if options.get("eav_fields"):
+            raise NotImplementedError
+
+        if options.get("loci"):
+            loci = self._get_loci_list(options)
+            values.extend(loci)
+
+        if options.get("locus_extended_attributes"):
+            raise NotImplementedError
+
+        if options.get("scheme_fields"):
+            raise NotImplementedError
+
+        if options.get("lincodes"):
+            raise NotImplementedError
+
+        if options.get("classification_groups"):
+            raise NotImplementedError
+
+        if options.get("annotation_status"):
+            raise NotImplementedError
+
+        if options.get("sort_labels"):
+            values = bigsdb.utils.dictionary_sort(values, self.cache["labels"])
+
+        if options.get("optgroups"):
+            raise NotImplementedError
+
+        return values, self.cache["labels"]
+
+    def _get_loci_list(self, options):
+        if "locus_limit" in options:
+            count = self.datastore.run_query("SELECT COUNT(*) FROM loci")
+            if count > options["locus_limit"]:
+                return []
+
+        if not self.cache.get("loci"):
+            locus_list = []
+            common_names = self.datastore.run_query(
+                "SELECT id, common_name FROM loci WHERE common_name IS NOT NULL",
+                None,
+                {"fetch": "all_hashref", "key": "id"},
+            )
+            set_id = self.get_set_id()
+            loci = self.datastore.get_loci(
+                {
+                    "query_pref": options.get("query_pref", 1),
+                    "analysis_pref": options.get("analysis_pref", 0),
+                    "seq_defined": 0,
+                    "do_not_order": 1,
+                    "set_id": set_id,
+                }
+            )
+            set_loci = (
+                self.datastore.run_query(
+                    "SELECT * FROM set_loci WHERE set_id=?",
+                    set_id,
+                    {"fetch": "all_hashref", "key": "locus"},
+                )
+                if set_id
+                else {}
+            )
+
+            for locus in loci:
+                locus_list.append(f"l_{locus}")
+                self.cache["labels"][f"l_{locus}"] = locus
+                set_name_is_set = False
+                if set_id:
+                    set_locus = set_loci.get(locus)
+                    if set_locus and set_locus.get("set_name"):
+                        self.cache["labels"][f"l_{locus}"] = set_locus["set_name"]
+                        if set_locus.get("set_common_name"):
+                            self.cache["labels"][
+                                f"l_{locus}"
+                            ] += f" ({set_locus['set_common_name']})"
+                            if not options.get("no_list_by_common_name"):
+                                locus_list.append(f"cn_{locus}")
+                                self.cache["labels"][
+                                    f"cn_{locus}"
+                                ] = f"{set_locus['set_common_name']} ({set_locus['set_name']})"
+                        set_name_is_set = True
+                if (
+                    not set_name_is_set
+                    and common_names.get(locus)
+                    and common_names[locus].get("common_name")
+                ):
+                    self.cache["labels"][
+                        f"l_{locus}"
+                    ] += f" ({common_names[locus]['common_name']})"
+                    if not options.get("no_list_by_common_name"):
+                        locus_list.append(f"cn_{locus}")
+                        self.cache["labels"][
+                            f"cn_{locus}"
+                        ] = f"{common_names[locus]['common_name']} ({locus})"
+
+            if self.prefs.get("locus_alias"):
+                alias_sql = self.db.prepare("SELECT locus, alias FROM locus_aliases")
+                try:
+                    alias_sql.execute()
+                except Exception as e:
+                    logger.error(e)
+                else:
+                    for locus, alias in alias_sql.fetchall_arrayref():
+                        if not self.cache["labels"].get(f"l_{locus}"):
+                            continue
+                        alias = alias.replace("_", " ")
+                        locus_list.append(f"la_{locus}||{alias}")
+                        self.cache["labels"][
+                            f"la_{locus}||{alias}"
+                        ] = f"{alias} [{self.cache['labels'][f'l_{locus}']}]"
+
+            locus_list.sort(key=lambda x: self.cache["labels"][x].lower())
+            locus_list = list(
+                dict.fromkeys(locus_list)
+            )  # Remove duplicates while preserving order
+            self.cache["loci"] = locus_list
+
+        return self.cache["loci"]
+
     def set_pref_requirements(self):
         self.pref_requirements = {"analysis": 1, "query_field": 1}
+
+    def get_selected_loci(self):
+        self._escape_params()
+        loci = self.params.get("locus", "")
+
+        loci_selected = []
+        if self.system["dbtype"] == "isolates":
+            pattern = re.compile(LOCUS_PATTERN)
+            for locus in loci:
+                match = pattern.match(locus)
+                locus_name = match.group(1) if match else None
+                if locus_name:
+                    loci_selected.append(locus_name)
+        else:
+            loci_selected = loci
+        pasted_cleaned_loci, invalid_loci = self._get_loci_from_pasted_list()
+
+        loci_selected.extend(pasted_cleaned_loci)
+
+        if len(invalid_loci) == 0:
+            for param in ["locus", "locus_paste_list"]:
+                if param in self.params:
+                    del self.params[param]
+
+        loci_selected = list(set(loci_selected))  # Remove duplicates
+        invalid_loci = list(set(invalid_loci))
+        return loci_selected, invalid_loci
+
+    def _get_loci_from_pasted_list(self):
+        cleaned_loci = []
+        invalid_loci = []
+        if self.params.get("locus_paste_list"):
+            loci_list = self.params["locus_paste_list"].split("\n")
+            for locus in loci_list:
+                if not locus.strip():
+                    continue
+                locus = locus.strip()
+                set_id = self.get_set_id()
+                if set_id:
+                    real_name = self.datastore.get_set_locus_real_id(locus, set_id)
+                else:
+                    real_name = locus
+                if self.datastore.is_locus(real_name):
+                    cleaned_loci.append(real_name)
+                else:
+                    invalid_loci.append(locus)
+        return cleaned_loci, invalid_loci
+
+    def _escape_params(self):
+        param_names = self.params.keys()
+        escapes = {
+            "__prime__": "'",
+            "__slash__": "\\",
+            "__comma__": ",",
+            "__space__": " ",
+            "_OPEN_": "[",
+            "_CLOSE_": "]",
+            "_GT_": ">",
+        }
+        for param_name in param_names:
+            key = param_name
+            if any(re.search(escape, param_name) for escape in escapes):
+                for escape_string, replacement in escapes.items():
+                    key = re.sub(escape_string, replacement, key)
+                q.set_param(key, q.param(param_name))
+        return
 
 
 # Function to create a nested defaultdict

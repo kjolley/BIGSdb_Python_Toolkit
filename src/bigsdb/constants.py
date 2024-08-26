@@ -18,9 +18,13 @@
 # along with BIGSdb Python Toolkit. If not,
 # see <https://www.gnu.org/licenses/>.
 
+import re
+
 DIRS = {"CONFIG_DIR": "/etc/bigsdb", "DBASE_CONFIG_DIR": "/etc/bigsdb/dbases"}
 
 LOGS = {"JOBS_LOG": "/var/log/bigsdb_jobs.log"}
+
+LOCUS_PATTERN = re.compile(r"^(?:l|cn|la)_(.+?)(?:\|\|.+)?$")
 
 CONNECTION_DETAILS = {
     "HOST": "localhost",

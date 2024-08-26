@@ -161,6 +161,10 @@ class TestDatastore(unittest.TestCase):
         loci = self.datastore.get_loci({"analysis_pref": 1})
         self.assertEqual(len(loci), 0)
 
+    def test_is_locus(self):
+        self.assertTrue(self.datastore.is_locus("abcZ"))
+        self.assertFalse(self.datastore.is_locus("Invalid"))
+
     def test_run_query(self):
         list = self.datastore.run_query(
             "SELECT id FROM isolates", None, {"fetch": "col_arrayref"}
