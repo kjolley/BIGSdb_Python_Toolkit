@@ -557,7 +557,7 @@ class Datastore(object):
         real_id = self.run_query(
             qry,
             [locus, set_id],
-            {"fetch": "row_array", "cache": "get_set_locus_real_id"},
+            {"fetch": "row_array"},
         )
         return real_id if real_id else locus
 

@@ -952,7 +952,6 @@ setTimeout(function(){{
         return cleaned_loci, invalid_loci
 
     def _escape_params(self):
-        param_names = self.params.keys()
         escapes = {
             "__prime__": "'",
             "__slash__": "\\",
@@ -962,13 +961,13 @@ setTimeout(function(){{
             "_CLOSE_": "]",
             "_GT_": ">",
         }
+        param_names = list(self.params.keys())
         for param_name in param_names:
             key = param_name
-            if any(re.search(escape, param_name) for escape in escapes):
+            if any(escape_string in param_name for escape_string in escapes.keys()):
                 for escape_string, replacement in escapes.items():
-                    key = re.sub(escape_string, replacement, key)
-                q.set_param(key, q.param(param_name))
-        return
+                    key = key.replace(escape_string, replacement)
+                self.params[key] = self.params.pop(param_name)
 
 
 # Function to create a nested defaultdict
