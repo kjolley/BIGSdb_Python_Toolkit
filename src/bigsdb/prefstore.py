@@ -56,10 +56,10 @@ class Prefstore:
             self.data_connector.drop_all_connections()
         self.db = self.data_connector.get_connection(
             dbase_name=self.config["prefs_db"],
-            host=self.config.get("dbhost") or HOST,
-            port=self.config.get("dbport") or PORT,
-            user=self.config.get("dbuser") or USER,
-            password=self.config.get("dbpassword") or PASSWORD,
+            host=self.config.get("dbhost") or CONNECTION_DETAILS["HOST"],
+            port=self.config.get("dbport") or CONNECTION_DETAILS["PORT"],
+            user=self.config.get("dbuser") or CONNECTION_DETAILS["USER"],
+            password=self.config.get("dbpassword") or CONNECTION_DETAILS["PASSWORD"],
         )
 
     def _check_required_parameters(self, **kwargs):
