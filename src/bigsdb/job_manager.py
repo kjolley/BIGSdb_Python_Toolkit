@@ -237,6 +237,8 @@ class JobManager(BaseApplication):
             "name",
             "remote_host",
             "db",
+            "locus",
+            "locus_paste_list",
         ]:
             params["parameters"].pop(key, None)
 
@@ -363,6 +365,15 @@ class JobManager(BaseApplication):
     def get_job_isolates(self, job_id):
         cursor = self.db.cursor()
         qry = "SELECT isolate_id FROM isolates WHERE job_id=%s ORDER BY isolate_id"
+        try:
+            cursor.execute(qry, [job_id])
+            return [row[0] for row in cursor.fetchall()]
+        except Exception as e:
+            self.logger.error(f"{e} Query:{qry}")
+
+    def get_job_loci(self, job_id):
+        cursor = self.db.cursor()
+        qry = "SELECT locus FROM loci WHERE job_id=%s ORDER BY locus"
         try:
             cursor.execute(qry, [job_id])
             return [row[0] for row in cursor.fetchall()]

@@ -919,14 +919,7 @@ setTimeout(function(){{
         else:
             loci_selected = loci
         pasted_cleaned_loci, invalid_loci = self._get_loci_from_pasted_list()
-
         loci_selected.extend(pasted_cleaned_loci)
-
-        if len(invalid_loci) == 0:
-            for param in ["locus", "locus_paste_list"]:
-                if param in self.params:
-                    del self.params[param]
-
         loci_selected = list(set(loci_selected))  # Remove duplicates
         invalid_loci = list(set(invalid_loci))
         return loci_selected, invalid_loci

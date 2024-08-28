@@ -137,7 +137,6 @@ class PyExport(Plugin):
             )
             self._print_interface()
             return
-        self.logger.error(loci)
         attributes = self.get_attributes()
         if self.args.get("curate"):
             self.params["curate"] = 1
@@ -151,6 +150,7 @@ class PyExport(Plugin):
                 "priority": attributes.get("priority"),
                 "parameters": self.params,
                 "isolates": ids,
+                "loci": loci,
                 "username": self.username,
                 "email": self.email,
             }
@@ -168,7 +168,7 @@ class PyExport(Plugin):
                 eav_fields.append(field)
         return eav_fields
 
-    def _get_header(self):
+    def _get_header(self, job_id):
         param_fields = self.params.get("fields", "").split("||")
         header = []
         for field in param_fields:
@@ -178,6 +178,8 @@ class PyExport(Plugin):
                 header.append(field.split("___")[1])
         eav_fields = self._get_selected_eav_fields()
         header.extend(eav_fields)
+        loci = self.job_manager.get_job_loci(job_id)
+        header.extend(loci)
         return header
 
     def _get_prov_fields(self):
@@ -191,10 +193,12 @@ class PyExport(Plugin):
     def run_job(self, job_id):
         view = self.system.get("view")
         ids = self.job_manager.get_job_isolates(job_id)
-        table = self.datastore.create_temp_list_table_from_list("int", ids)
+        isolate_table = self.datastore.create_temp_list_table_from_list("int", ids)
+        loci = self.job_manager.get_job_loci(job_id)
+        locus_table = self.datastore.create_temp_list_table_from_list("text", loci)
         outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
         param_fields = self.params.get("fields", "").split("||")
-        header = self._get_header()
+        header = self._get_header(job_id)
         fields = self._get_prov_fields()
         if "id" not in fields:
             fields.insert(0, "id")
@@ -202,7 +206,7 @@ class PyExport(Plugin):
         qry = (
             f"SELECT "
             + ",".join(fields)
-            + f" FROM {view} v JOIN {table} l ON v.id=l.value ORDER BY id"
+            + f" FROM {view} v JOIN {isolate_table} l ON v.id=l.value ORDER BY id"
         )
         results = self.datastore.run_query(
             qry, None, {"fetch": "all_arrayref", "slice": {}}
@@ -228,7 +232,6 @@ class PyExport(Plugin):
                             or ""
                         )
                     )
-
                 i += 1
                 f.write(
                     "\t".join(self._convert_to_string(value) for value in row_values)
