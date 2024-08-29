@@ -30,6 +30,7 @@ parser.add_argument(
     "--module_dir", type=str, required=True, help="Plugin module directory"
 )
 parser.add_argument("--arg_file", type=str, required=False, help="Argument JSON file")
+parser.add_argument("--log_file", type=str, required=False, help="BIGSdb log file")
 parser.add_argument(
     "--run_job", type=str, required=False, help="Run specified job from queue"
 )
@@ -46,7 +47,10 @@ def main():
         raise ValueError("Either --arg_file or --run_job must be specified")
     module = importlib.import_module(args.module)
     plugin = getattr(module, args.module)(
-        database=args.database, arg_file=args.arg_file, run_job=args.run_job
+        database=args.database,
+        arg_file=args.arg_file,
+        run_job=args.run_job,
+        log_file=args.log_file,
     )
     if args.run_job:
         plugin.run_job(job_id=args.run_job)

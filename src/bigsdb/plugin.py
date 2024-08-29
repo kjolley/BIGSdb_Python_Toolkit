@@ -41,12 +41,13 @@ class Plugin(BaseApplication):
         arg_file=None,
         retrieving_attributes=False,
         logger=None,
+        log_file=None,
         run_job=None,
     ):
         if not retrieving_attributes:
             if arg_file and database == None:
                 raise ValueError("No database parameter passed.")
-        self._init_logger(logger=logger)
+        self._init_logger(logger=logger, log_file=log_file, run_job=run_job)
         super(Plugin, self).__init__(
             database=database,
             config_dir=config_dir,
@@ -86,12 +87,15 @@ class Plugin(BaseApplication):
     def run_job(self, job_id):
         pass
 
-    def _init_logger(self, logger=None):
+    def _init_logger(self, logger=None, log_file=None, run_job=None):
         if logger:
             self.logger = logger
             return
         self.logger = logging.getLogger(__name__)
-        f_handler = logging.FileHandler(LOGS["JOBS_LOG"])
+        if run_job:
+            f_handler = logging.FileHandler(log_file or LOGS["JOBS_LOG"])
+        else:
+            f_handler = logging.FileHandler(log_file or LOGS["BIGSDB_LOG"])
         f_handler.setLevel(logging.INFO)
         f_format = logging.Formatter(
             "%(asctime)s - %(levelname)s: - %(module)s:%(lineno)d - %(message)s"

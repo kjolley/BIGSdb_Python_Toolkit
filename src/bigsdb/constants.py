@@ -22,7 +22,7 @@ import re
 
 DIRS = {"CONFIG_DIR": "/etc/bigsdb", "DBASE_CONFIG_DIR": "/etc/bigsdb/dbases"}
 
-LOGS = {"JOBS_LOG": "/var/log/bigsdb_jobs.log"}
+LOGS = {"BIGSDB_LOG": "/var/log/bigsdb.log", "JOBS_LOG": "/var/log/bigsdb_jobs.log"}
 
 LOCUS_PATTERN = re.compile(r"^(?:l|cn|la)_(.+?)(?:\|\|.+)?$")
 
