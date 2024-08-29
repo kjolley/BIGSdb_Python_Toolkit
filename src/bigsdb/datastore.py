@@ -561,6 +561,25 @@ class Datastore(object):
         )
         return real_id if real_id else locus
 
+    def get_allele_designations(self, isolate_id, locus):
+        qry = (
+            "SELECT * FROM allele_designations WHERE (isolate_id,locus)=(?,?) "
+            "ORDER BY status,(substring (allele_id, '^[0-9]+'))::int,allele_id"
+        )
+        return self.run_query(
+            qry, [isolate_id, locus], {"fetch": "all_arrayref", "slice": {}}
+        )
+
+    def get_allele_designations_with_locus_list_table(
+        self, isolate_id, locus_list_table
+    ):
+        qry = (
+            "SELECT locus,allele_id,status FROM allele_designations ad JOIN "
+            f"{locus_list_table} l ON ad.locus=l.value WHERE isolate_id=? ORDER BY "
+            "locus,status,(substring (allele_id, '^[0-9]+'))::int,allele_id"
+        )
+        return self.run_query(qry, isolate_id, {"fetch": "all_arrayref", "slice": {}})
+
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.

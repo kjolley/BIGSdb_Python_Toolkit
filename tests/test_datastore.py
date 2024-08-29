@@ -244,6 +244,26 @@ class TestDatastore(unittest.TestCase):
         count = self.datastore.run_query(qry)
         self.assertEqual(count, 5)
 
+    def test_get_allele_designations(self):
+        designations = self.datastore.get_allele_designations(1, "abcZ")
+        self.assertEqual(len(designations), 1)
+        self.assertEqual(designations[0]["allele_id"], "1")
+
+    def test_get_designations_with_locus_list_table(self):
+        table = self.datastore.create_temp_list_table_from_list(
+            "text", ["abcZ", "adk", "aroE"]
+        )
+        designations = self.datastore.get_allele_designations_with_locus_list_table(
+            1, table
+        )
+        self.assertEqual(len(designations), 3)
+        self.assertEqual(designations[0]["locus"], "abcZ")
+        self.assertEqual(designations[0]["allele_id"], "1")
+        self.assertEqual(designations[1]["locus"], "adk")
+        self.assertEqual(designations[1]["allele_id"], "3")
+        self.assertEqual(designations[2]["locus"], "aroE")
+        self.assertEqual(designations[2]["allele_id"], "3")
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")

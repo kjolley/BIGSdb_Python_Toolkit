@@ -232,6 +232,19 @@ class PyExport(Plugin):
                             or ""
                         )
                     )
+                designations = (
+                    self.datastore.get_allele_designations_with_locus_list_table(
+                        record["id"], locus_table
+                    )
+                )
+                alleles = {}
+                for designation in designations:
+                    if alleles.get(designation["locus"]) == None:
+                        alleles[designation["locus"]] = []
+                    alleles[designation["locus"]].append(designation["allele_id"])
+
+                for locus in loci:
+                    row_values.append("; ".join(alleles.get(locus, [])))
                 i += 1
                 f.write(
                     "\t".join(self._convert_to_string(value) for value in row_values)
