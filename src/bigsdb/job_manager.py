@@ -373,7 +373,7 @@ class JobManager(BaseApplication):
 
     def get_job_loci(self, job_id):
         cursor = self.db.cursor()
-        qry = "SELECT locus FROM loci WHERE job_id=%s ORDER BY locus"
+        qry = "SELECT locus FROM loci WHERE job_id=%s ORDER BY LOWER(locus)"
         try:
             cursor.execute(qry, [job_id])
             return [row[0] for row in cursor.fetchall()]
