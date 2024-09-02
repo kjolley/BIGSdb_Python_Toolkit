@@ -264,6 +264,18 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(designations[2]["locus"], "aroE")
         self.assertEqual(designations[2]["allele_id"], "3")
 
+    def test_get_scheme_info(self):
+        info = self.datastore.get_scheme_info(1)
+        self.assertEqual(info["name"], "MLST")
+        self.assertEqual(info.get("primary_key"), None)
+        info = self.datastore.get_scheme_info(1, {"get_pk": 1})
+        self.assertEqual(info["primary_key"], "ST")
+
+    def test_scheme_loci(self):
+        loci = self.datastore.get_scheme_loci(1)
+        self.assertEqual(len(loci), 7)
+        self.assertTrue("abcZ" in loci)
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")

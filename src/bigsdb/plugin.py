@@ -908,7 +908,7 @@ setTimeout(function(){{
     def set_pref_requirements(self):
         self.pref_requirements = {"analysis": 1, "query_field": 1}
 
-    def get_selected_loci(self):
+    def get_selected_loci(self, options={}):
         self._escape_params()
         loci = self.params.get("locus", "")
 
@@ -923,7 +923,11 @@ setTimeout(function(){{
         else:
             loci_selected = loci
         pasted_cleaned_loci, invalid_loci = self._get_loci_from_pasted_list()
+
         loci_selected.extend(pasted_cleaned_loci)
+        if options.get("scheme_loci"):
+            scheme_loci = self._get_selected_scheme_loci(options)
+            loci_selected.extend(scheme_loci)
         loci_selected = list(set(loci_selected))  # Remove duplicates
         invalid_loci = list(set(invalid_loci))
         return loci_selected, invalid_loci
@@ -948,6 +952,33 @@ setTimeout(function(){{
                     invalid_loci.append(locus)
         return cleaned_loci, invalid_loci
 
+    def _get_selected_scheme_loci(self, options={}):
+        scheme_ids = self.datastore.run_query(
+            "SELECT id FROM schemes", None, {"fetch": "col_arrayref"}
+        )
+        scheme_ids.append(0)
+
+        selected_schemes = []
+        loci = []
+
+        for scheme_id in scheme_ids:
+            if not self.params.get(f"s_{scheme_id}"):
+                continue
+            selected_schemes.append(scheme_id)
+            if options.get("delete_params"):
+                self.params.pop(f"s_{scheme_id}")
+        set_id = self.get_set_id()
+
+        for scheme_id in selected_schemes:
+            if scheme_id:
+                scheme_loci = self.datastore.get_scheme_loci(scheme_id)
+            else:
+                scheme_loci = self.datastore.get_loci_in_no_scheme({"set_id": set_id})
+
+            loci.extend(scheme_loci)
+
+        return loci
+
     def _escape_params(self):
         escapes = {
             "__prime__": "'",
@@ -965,6 +996,251 @@ setTimeout(function(){{
                 for escape_string, replacement in escapes.items():
                     key = key.replace(escape_string, replacement)
                 self.params[key] = self.params.pop(param_name)
+
+    def print_scheme_fieldset(self, options={}):
+        analysis_pref = options.get("analysis_pref", 1)
+        print(
+            '<fieldset id="scheme_fieldset" style="float:left"><legend>Schemes</legend>'
+            '<noscript><p class="highlight">Enable Javascript to select schemes.</p></noscript>'
+            '<div id="tree" class="tree" style="height:14em;width:20em">'
+        )
+
+        print(
+            self.get_tree(
+                {"select_schemes": 1, "analysis_pref": analysis_pref},
+            )
+        )
+
+        print("</div>")
+
+        if options.get("fields_or_loci"):
+            print('<div style="padding-top:1em"><ul><li>')
+            print(
+                '<input type="checkbox" name="scheme_fields" checked> '
+                "Include all fields from selected schemes"
+            )
+
+            print("</li><li>")
+            print(
+                '<input type="checkbox" name="scheme_members" checked> '
+                "Include all loci from selected schemes"
+            )
+
+            print("</li></ul></div>")
+
+        print("</fieldset>")
+
+    def get_tree(self, options={}):
+
+        groups_with_no_parent = self.datastore.run_query(
+            "SELECT id FROM scheme_groups WHERE id NOT IN (SELECT group_id FROM "
+            "scheme_group_group_members) ORDER BY display_order,name",
+            None,
+            {"fetch": "col_arrayref"},
+        )
+
+        set_id = self.get_set_id()
+        buffer = ""
+
+        for group in groups_with_no_parent:
+            group_info = self.datastore.get_scheme_group_info(group)
+            group_scheme_buffer = self._get_group_schemes(group, options)
+            child_group_buffer = self._get_child_groups(group, 1, options)
+            if not group_scheme_buffer and not child_group_buffer:
+                continue
+
+            buffer += f"<li><a>{group_info['name']}</a>\n"
+            buffer += group_scheme_buffer
+            buffer += child_group_buffer
+            buffer += "</li>\n"
+
+        buffer += self._add_schemes_not_in_groups(
+            {
+                "options": options,
+                "groups_with_no_parent": groups_with_no_parent,
+                "page": self.params["page"],
+            }
+        )
+
+        loci_not_in_schemes = self.datastore.get_loci_in_no_scheme({"set_id": set_id})
+        if not options.get("schemes_only") and loci_not_in_schemes:
+            id_attr = ' id="s_0"' if options.get("select_schemes") else ""
+            buffer += f"<li{id_attr}><a>Loci not in schemes</a>\n"
+            buffer += "</li>\n"
+
+        if buffer:
+            if options.get("schemes_only"):
+                return f"<ul>{buffer}</ul>"
+            main_buffer = "<ul>\n"
+            main_buffer += '<li id="all_loci" data-jstree=\'{"opened":true}\'><a>All loci</a><ul>\n'
+            main_buffer += buffer
+            main_buffer += "</ul>\n</li></ul>\n"
+        else:
+            main_buffer = "<ul><li><a>No loci available for analysis.</a></li></ul>\n"
+
+        if options.get("get_groups"):
+            groups = set()
+            for match in re.findall(r"group_id=(\d+)", main_buffer):
+                groups.add(match)
+            return groups
+
+        return main_buffer
+
+    def _get_group_schemes(self, group_id, options={}):
+
+        buffer = ""
+        set_id = self.get_set_id()
+        set_clause = (
+            f" AND scheme_id IN (SELECT scheme_id FROM set_schemes WHERE set_id={set_id})"
+            if set_id
+            else ""
+        )
+
+        schemes = self.datastore.run_query(
+            "SELECT scheme_id FROM scheme_group_scheme_members m LEFT JOIN schemes s ON "
+            f"s.id=m.scheme_id WHERE m.group_id=? {set_clause} ORDER BY display_order,name",
+            group_id,
+            {"fetch": "col_arrayref"},
+        )
+
+        if schemes:
+            for scheme_id in schemes:
+                if options.get("isolate_display") and not self.prefs[
+                    "isolate_display_schemes"
+                ].get(scheme_id):
+                    continue
+                if options.get("analysis_pref") and not self.prefs[
+                    "analysis_schemes"
+                ].get(scheme_id):
+                    continue
+                if options.get("no_disabled") and self.prefs["disable_schemes"].get(
+                    scheme_id
+                ):
+                    continue
+
+                scheme_info = self.datastore.get_scheme_info(
+                    scheme_id, {"set_id": set_id}
+                )
+
+                scheme_info["name"] = scheme_info["name"].replace("&", "&amp;")
+
+                id_attr = (
+                    f' id="s_{scheme_id}"' if options.get("select_schemes") else ""
+                )
+                buffer += f'<li{id_attr}><a>{scheme_info["name"]}</a></li>\n'
+
+        return f"<ul>{buffer}</ul>\n" if buffer else ""
+
+    def _get_child_groups(self, group_id, level, options={}):
+
+        buffer = ""
+        child_groups = self.datastore.run_query(
+            "SELECT id FROM scheme_groups LEFT JOIN scheme_group_group_members ON "
+            "scheme_groups.id=group_id WHERE parent_group_id=? ORDER BY display_order,name",
+            group_id,
+            {"fetch": "col_arrayref"},
+        )
+
+        if child_groups:
+            for group_id in child_groups:
+                group_info = self.datastore.get_scheme_group_info(group_id)
+                new_level = level
+                if new_level == 10:
+                    break  # prevent runaway if child is set as the parent of a parental group
+
+                group_scheme_buffer = self._get_group_schemes(group_id, options)
+                child_group_buffer = self._get_child_groups(
+                    group_id, new_level + 1, options
+                )
+
+                if group_scheme_buffer or child_group_buffer:
+                    page = self.params.get("page")
+                    if options.get("schemes_only"):
+                        buffer += f'<li>{group_info["name"]}\n'
+                    else:
+                        buffer += f'<li><a>{group_info["name"]}</a>\n'
+                    buffer += group_scheme_buffer
+                    buffer += child_group_buffer
+                    buffer += "</li>"
+
+        return f"<ul>\n{buffer}</ul>\n" if buffer else ""
+
+    def _add_schemes_not_in_groups(self, args):
+        options = args.get("options", {})
+        groups_with_no_parent = args.get("groups_with_no_parent", [])
+        page = args.get("page", "")
+        schemes_not_in_group = self._get_schemes_not_in_groups(options)
+        buffer = ""
+
+        if schemes_not_in_group:
+            data_exists = False
+            temp_buffer = ""
+
+            if groups_with_no_parent:
+                if options.get("schemes_only"):
+                    temp_buffer += "<li>Other schemes<ul>"
+                else:
+                    temp_buffer += "<li><a>Other schemes</a><ul>"
+
+            for scheme in schemes_not_in_group:
+                if not self._should_display_scheme_in_tree(scheme["id"], options):
+                    continue
+
+                scheme["name"] = scheme["name"].replace("&", "&amp;")
+
+                if isolate_id is None or self._scheme_data_present(
+                    scheme["id"], isolate_id
+                ):
+                    data_exists = True
+                    id_attr = (
+                        f' id="s_{scheme["id"]}"'
+                        if options.get("select_schemes")
+                        else ""
+                    )
+                    temp_buffer += f'<li{id_attr}><a>{scheme["name"]}</a>\n'
+                    temp_buffer += "</li>\n"
+
+            if groups_with_no_parent:
+                temp_buffer += "</ul></li>"
+
+            if data_exists:
+                buffer += temp_buffer
+
+        return buffer
+
+    def _get_schemes_not_in_groups(self, options={}):
+        set_id = self.get_set_id()
+        set_clause = (
+            f"AND id IN (SELECT scheme_id FROM set_schemes WHERE set_id={set_id})"
+            if set_id
+            else ""
+        )
+
+        no_submission_clause = (
+            " AND id IN (SELECT scheme_id FROM scheme_members sm JOIN loci l ON "
+            "sm.locus=l.id WHERE NOT l.no_submissions OR l.no_submissions IS NULL)"
+            if options.get("filter_no_submissions")
+            else ""
+        )
+
+        schemes = self.datastore.run_query(
+            "SELECT id FROM schemes WHERE id NOT IN (SELECT scheme_id FROM "
+            f"scheme_group_scheme_members) {set_clause}{no_submission_clause} ORDER "
+            "BY display_order,name",
+            None,
+            {"fetch": "col_arrayref", "slice": {}},
+        )
+
+        not_in_group = []
+        for scheme_id in schemes:
+            if self.prefs["disable_schemes"].get(scheme_id) and options.get(
+                "no_disabled"
+            ):
+                continue
+            scheme_info = self.datastore.get_scheme_info(scheme_id, {"set_id": set_id})
+            not_in_group.append({"id": scheme_id, "name": scheme_info["name"]})
+
+        return not_in_group
 
 
 # Function to create a nested defaultdict

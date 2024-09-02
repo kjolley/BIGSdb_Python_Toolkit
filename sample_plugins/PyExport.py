@@ -101,6 +101,7 @@ class PyExport(Plugin):
         )
         self.print_eav_fields_fieldset({"no_all_none": 1})
         self.print_isolates_locus_fieldset({"locus_paste_list": 1, "no_all_none": 1})
+        self.print_scheme_fieldset({"fields_or_loci": 1})
         self.print_action_fieldset({"no_reset": 1})
         self.print_hidden(["db", "page", "name", "set_id"])
         self.end_form()
@@ -127,7 +128,10 @@ class PyExport(Plugin):
             )
             self._print_interface()
             return
-        loci, invalid_loci = self.get_selected_loci()
+
+        loci, invalid_loci = self.get_selected_loci(
+            {"delete_params": 1, "scheme_loci": self.params.get("scheme_members")}
+        )
         if len(invalid_loci):
             list_string = ", ".join(map(str, invalid_loci))
             self.print_bad_status(
@@ -142,6 +146,7 @@ class PyExport(Plugin):
             self.params["curate"] = 1
         if self.args.get("set_id"):
             self.params["set_id"] = self.args.get("set_id")
+
         job_id = self.job_manager.add_job(
             {
                 "dbase_config": self.instance,

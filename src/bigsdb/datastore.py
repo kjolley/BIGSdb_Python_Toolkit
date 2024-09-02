@@ -536,6 +536,31 @@ class Datastore(object):
         query_loci = list(set(query_loci))
         return query_loci
 
+    def get_loci_in_no_scheme(self, options={}):
+
+        if options.get("set_id"):
+            qry = (
+                f"SELECT locus FROM set_loci WHERE set_id={options['set_id']} AND "
+                "locus NOT IN (SELECT locus FROM scheme_members WHERE scheme_id IN "
+                f"(SELECT scheme_id FROM set_schemes WHERE set_id={options['set_id']})) "
+                "ORDER BY locus"
+            )
+        else:
+            qry = (
+                "SELECT id FROM loci LEFT JOIN scheme_members ON loci.id="
+                "scheme_members.locus WHERE scheme_id IS NULL ORDER BY id"
+            )
+
+        data = self.run_query(
+            qry, None, {"fetch": "col_arrayref", "cache": "get_loci_in_no_scheme"}
+        )
+
+        if not options.get("analyse_pref"):
+            return data
+
+        loci = [locus for locus in data if self.prefs["analysis_loci"].get(locus)]
+        return loci
+
     def update_prefs(self, prefs):
         self.prefs = bigsdb.utils.convert_to_defaultdict(prefs)
 
@@ -579,6 +604,73 @@ class Datastore(object):
             "locus,status,(substring (allele_id, '^[0-9]+'))::int,allele_id"
         )
         return self.run_query(qry, isolate_id, {"fetch": "all_arrayref", "slice": {}})
+
+    def get_scheme_group_info(self, group_id):
+        return self.run_query(
+            "SELECT * FROM scheme_groups WHERE id=?",
+            group_id,
+            {"fetch": "row_hashref", "cache": "get_scheme_group_info"},
+        )
+
+    def get_scheme_info(self, scheme_id, options={}):
+
+        scheme_info = self.run_query(
+            "SELECT * FROM schemes WHERE id=?",
+            scheme_id,
+            {
+                "fetch": "row_hashref",
+            },
+        )
+
+        if "set_id" in options:
+            desc = self.run_query(
+                "SELECT set_name FROM set_schemes WHERE set_id=? AND scheme_id=?",
+                [options["set_id"], scheme_id],
+                {
+                    "fetch": "row_array",
+                },
+            )
+            if desc:
+                scheme_info["name"] = desc[0]
+
+        if "get_pk" in options:
+            pk = self.run_query(
+                "SELECT field FROM scheme_fields WHERE scheme_id=? AND primary_key",
+                scheme_id,
+                {"fetch": "row_array"},
+            )
+            if pk:
+                scheme_info["primary_key"] = pk
+
+        return scheme_info
+
+    def get_scheme_loci(self, scheme_id, options={}):
+
+        if scheme_id not in self.cache.get("scheme_loci", {}):
+            qry = (
+                "SELECT locus"
+                + (",profile_name" if self.system["dbtype"] == "isolates" else "")
+                + " FROM scheme_members WHERE scheme_id=? ORDER BY field_order,locus"
+            )
+            self.cache.setdefault("scheme_loci", {})[scheme_id] = self.run_query(
+                qry, scheme_id, {"fetch": "all_arrayref"}
+            )
+
+        loci = []
+        for locus_info in self.cache["scheme_loci"][scheme_id]:
+            locus, profile_name = (
+                locus_info if len(locus_info) > 1 else (locus_info[0], None)
+            )
+
+            if options.get("analysis_pref"):
+                if self.prefs["analysis_loci"].get(locus) and self.prefs[
+                    "analysis_schemes"
+                ].get(scheme_id):
+                    loci.append(profile_name if options.get("profile_name") else locus)
+            else:
+                loci.append(profile_name if options.get("profile_name") else locus)
+
+        return loci
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
