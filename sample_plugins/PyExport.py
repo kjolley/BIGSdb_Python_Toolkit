@@ -130,7 +130,7 @@ class PyExport(Plugin):
             return
 
         loci, invalid_loci = self.get_selected_loci(
-            {"delete_params": 1, "scheme_loci": self.params.get("scheme_members")}
+            {"delete_params": 0, "scheme_loci": self.params.get("scheme_members")}
         )
         if len(invalid_loci):
             list_string = ", ".join(map(str, invalid_loci))
@@ -183,8 +183,26 @@ class PyExport(Plugin):
                 header.append(field.split("___")[1])
         eav_fields = self._get_selected_eav_fields()
         header.extend(eav_fields)
+        schemes = self.datastore.run_query(
+            "SELECT id FROM schemes ORDER BY id", None, {"fetch": "col_arrayref"}
+        )
+        locus_used = {}
+        for scheme_id in schemes:
+            if self.params.get(f"s_{scheme_id}"):
+                if self.params.get("scheme_members"):
+                    loci = self.datastore.get_scheme_loci(scheme_id)
+                    for locus in loci:
+                        if not locus_used.get(locus):
+                            locus_used[locus] = 1
+                            header.append(locus)
+                if self.params.get("scheme_fields"):
+                    fields = self.datastore.get_scheme_fields(scheme_id)
+                    header.extend(fields)
         loci = self.job_manager.get_job_loci(job_id)
-        header.extend(loci)
+        for locus in loci:
+            if not locus_used.get(locus):
+                locus_used[locus] = 1
+                header.append(locus)
         return header
 
     def _get_prov_fields(self):
@@ -201,10 +219,15 @@ class PyExport(Plugin):
         isolate_table = self.datastore.create_temp_list_table_from_list("int", ids)
         loci = self.job_manager.get_job_loci(job_id)
         locus_table = self.datastore.create_temp_list_table_from_list("text", loci)
+        schemes = self.datastore.run_query(
+            "SELECT id FROM schemes ORDER BY id", None, {"fetch": "col_arrayref"}
+        )
+
         outfile = f"{self.config['tmp_dir']}/{job_id}.txt"
         param_fields = self.params.get("fields", "").split("||")
         header = self._get_header(job_id)
         fields = self._get_prov_fields()
+
         if "id" not in fields:
             fields.insert(0, "id")
 
@@ -248,8 +271,24 @@ class PyExport(Plugin):
                         alleles[designation["locus"]] = []
                     alleles[designation["locus"]].append(designation["allele_id"])
 
+                locus_used = {}
+                for scheme_id in schemes:
+                    if self.params.get(f"s_{scheme_id}"):
+                        if self.params.get("scheme_members"):
+                            loci = self.datastore.get_scheme_loci(scheme_id)
+                            for locus in loci:
+                                if not locus_used.get(locus):
+                                    locus_used[locus] = 1
+                                    row_values.append("; ".join(alleles.get(locus, [])))
+                        if self.params.get("scheme_fields"):
+                            fields = self.datastore.get_scheme_fields(scheme_id)
+                            for field in fields:
+                                row_values.append("XXX")
                 for locus in loci:
-                    row_values.append("; ".join(alleles.get(locus, [])))
+                    if not locus_used.get(locus):
+                        locus_used[locus] = 1
+                        row_values.append("; ".join(alleles.get(locus, [])))
+
                 i += 1
                 f.write(
                     "\t".join(self._convert_to_string(value) for value in row_values)

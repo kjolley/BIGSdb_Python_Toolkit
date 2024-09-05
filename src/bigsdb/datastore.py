@@ -672,6 +672,28 @@ class Datastore(object):
 
         return loci
 
+    # NOTE: Data are returned in a cached reference that may be needed more than once.
+    # If calling code needs to modify returned values then you MUST make a local copy.
+    def get_all_scheme_fields(self):
+        if self.cache.get("all_scheme_fields") is None:
+            data = self.run_query(
+                "SELECT scheme_id, field FROM scheme_fields ORDER BY field_order, field",
+                None,
+                {"fetch": "all_arrayref"},
+            )
+            self.cache["all_scheme_fields"] = {}
+            for row in data:
+                scheme_id, field = row
+                if scheme_id not in self.cache["all_scheme_fields"]:
+                    self.cache["all_scheme_fields"][scheme_id] = []
+                self.cache["all_scheme_fields"][scheme_id].append(field)
+
+        return self.cache["all_scheme_fields"]
+
+    def get_scheme_fields(self, scheme_id):
+        fields = self.get_all_scheme_fields()
+        return fields.get(scheme_id, [])
+
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.

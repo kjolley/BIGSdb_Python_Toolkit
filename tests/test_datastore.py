@@ -271,6 +271,12 @@ class TestDatastore(unittest.TestCase):
         info = self.datastore.get_scheme_info(1, {"get_pk": 1})
         self.assertEqual(info["primary_key"], "ST")
 
+    def test_get_scheme_fields(self):
+        fields = self.datastore.get_scheme_fields(1)
+        self.assertEqual(len(fields), 2)
+        self.assertEqual(fields[0], "ST")
+        self.assertEqual(fields[1], "clonal_complex")
+
     def test_scheme_loci(self):
         loci = self.datastore.get_scheme_loci(1)
         self.assertEqual(len(loci), 7)

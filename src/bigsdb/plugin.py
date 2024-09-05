@@ -1011,7 +1011,6 @@ setTimeout(function(){{
             datastore=self.datastore,
             prefs=self.prefs,
             params=self.params,
-            logger=self.logger,
             set_id=set_id,
         )
         print(

@@ -20,11 +20,10 @@
 
 
 class SchemeSelector:
-    def __init__(self, datastore, prefs, params, logger, set_id=None):
+    def __init__(self, datastore, prefs, params, set_id=None):
         self.datastore = datastore
         self.prefs = prefs
         self.params = params
-        self.logger = logger
         self.set_id = set_id
 
     def get_tree(self, options={}):
