@@ -283,10 +283,27 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(len(loci), 7)
         self.assertTrue("abcZ" in loci)
 
-    def test_scheme(self):
+    def test_scheme_get_profile_by_pks(self):
         scheme = self.datastore.get_scheme(scheme_id=1)
         profile = scheme.get_profile_by_primary_keys("11")
         self.assertListEqual(profile, ["2", "3", "4", "3", "8", "4", "6"])
+
+    def test_scheme_get_field_values_by_designations(self):
+        scheme = self.datastore.get_scheme(scheme_id=1)
+        values = scheme.get_field_values_by_designations(
+            designations={
+                "abcZ": [{"allele_id": "2"}],
+                "adk": [{"allele_id": "3"}],
+                "aroE": [{"allele_id": "4"}],
+                "fumC": [{"allele_id": "3"}],
+                "gdh": [{"allele_id": "8"}],
+                "pdhC": [{"allele_id": "4"}],
+                "pgm": [{"allele_id": "6"}],
+            }
+        )
+        st, cc = values[0]
+        self.assertEqual(st, "11")
+        self.assertEqual(cc, "ST-11 complex")
 
     @classmethod
     def setUpClass(cls):

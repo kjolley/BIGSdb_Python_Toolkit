@@ -64,3 +64,75 @@ class Scheme:
             if profile == None:
                 return
             return profile[0]
+
+    # designations is a dict containing a list of allele_designations for each locus.
+    def get_field_values_by_designations(self, designations, options={}):
+        loci = self.loci
+        fields = self.fields
+
+        used_loci = []
+        missing_loci = {}
+        values = {}
+
+        for locus in loci:
+            if locus not in designations:
+                if options.get("dont_match_missing_loci"):
+                    continue
+                values[locus] = {"allele_ids": [-999], "allele_count": 1}
+                missing_loci[locus] = 1
+            else:
+                if (
+                    options.get("dont_match_missing_loci")
+                    and designations[locus][0]["allele_id"] == "N"
+                ):
+                    continue
+                values[locus] = {"allele_count": len(designations[locus])}
+                allele_ids = []
+                for designation in designations[locus]:
+                    if designation["allele_id"] == "0":
+                        missing_loci[locus] = 1
+                    if "allele_id" in designation:
+                        designation["allele_id"] = designation["allele_id"].replace(
+                            "'", "\\'"
+                        )
+                    else:
+                        self.logger.error(
+                            f"{self['instance']}: Undefined allele for locus {locus}"
+                        )
+                    allele_ids.append(designation["allele_id"])
+                values[locus]["allele_ids"] = allele_ids
+            used_loci.append(locus)
+
+        if not values:
+            return {}
+
+        locus_terms = []
+        for locus in used_loci:
+            if not options.get("dont_match_missing_loci", True):
+                if self["allow_missing_loci"]:
+                    values[locus]["allele_ids"].append("N")
+                if self["allow_presence"] and locus not in missing_loci:
+                    values[locus]["allele_ids"].append("P")
+            locus_terms.append(
+                f"profile[{self.locus_index[locus]}] IN "
+                f"(E'{','.join(map(str, values[locus]['allele_ids']))}')"
+            )
+
+        locus_term_string = " AND ".join(locus_terms)
+        table = f"mv_scheme_{self.dbase_id}"
+
+        qry = f"SELECT {','.join(fields)} FROM {table} WHERE {locus_term_string}"
+        cursor = self.db.cursor()
+        try:
+            cursor.execute(qry)
+        except Exception as e:
+            self.logger.warn(
+                "Check database attributes in the scheme_fields table for "
+                f"scheme#{self.id} ({self.name})! {e}"
+            )
+            self.db.rollback()
+            raise ValueError("Scheme configuration error")
+
+        field_data = cursor.fetchall()
+        self.db.commit()
+        return field_data

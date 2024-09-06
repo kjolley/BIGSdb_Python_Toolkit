@@ -663,15 +663,17 @@ class Datastore(object):
             locus, profile_name = (
                 locus_info if len(locus_info) > 1 else (locus_info[0], None)
             )
-
             if options.get("analysis_pref"):
                 if self.prefs["analysis_loci"].get(locus) and self.prefs[
                     "analysis_schemes"
                 ].get(scheme_id):
-                    loci.append(profile_name if options.get("profile_name") else locus)
+                    loci.append(
+                        profile_name or locus if options.get("profile_name") else locus
+                    )
             else:
-                loci.append(profile_name if options.get("profile_name") else locus)
-
+                loci.append(
+                    profile_name or locus if options.get("profile_name") else locus
+                )
         return loci
 
     # NOTE: Data are returned in a cached reference that may be needed more than once.
