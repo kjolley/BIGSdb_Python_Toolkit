@@ -25,6 +25,7 @@ import random
 from io import StringIO
 from collections import defaultdict
 import bigsdb.utils
+from bigsdb.scheme import Scheme
 
 
 class Datastore(object):
@@ -56,6 +57,7 @@ class Datastore(object):
         self.cache = defaultdict(nested_defaultdict)
         self.prefs = defaultdict(nested_defaultdict)
         self.user_dbs = {}
+        self.scheme = {}
 
     def run_query(self, qry, values=[], options={}):
         if type(values) is not list:
@@ -693,6 +695,47 @@ class Datastore(object):
     def get_scheme_fields(self, scheme_id):
         fields = self.get_all_scheme_fields()
         return fields.get(scheme_id, [])
+
+    def get_scheme(self, scheme_id):
+        if scheme_id not in self.scheme:
+            attributes = self.get_scheme_info(scheme_id)
+            if "dbase_name" in attributes:
+                try:
+                    attributes["db"] = self.data_connector.get_connection(
+                        dbase_name=attributes["dbase_name"],
+                        host=attributes["dbase_host"]
+                        or self.config.get("dbase_host")
+                        or self.config.get("dbhost")
+                        or self.system.get("host"),
+                        user=attributes["dbase_user"]
+                        or self.config.get("dbase_user")
+                        or self.config.get("dbuser")
+                        or self.system.get("user"),
+                        password=attributes["dbase_password"]
+                        or self.config.get("dbase_password")
+                        or self.config.get("dbpassword")
+                        or self.system.get("password"),
+                    )
+
+                except Exception as e:
+                    self.logger.error(
+                        f"Error connecting scheme database scheme:{scheme_id}: {e}"
+                    )
+
+                attributes["fields"] = self.get_scheme_fields(scheme_id)
+                attributes["loci"] = self.get_scheme_loci(
+                    scheme_id, ({"profile_name": 1, "analysis_pref": 0})
+                )
+                attributes["primary_keys"] = self.run_query(
+                    "SELECT field FROM scheme_fields WHERE scheme_id=%s AND "
+                    "primary_key ORDER BY field_order",
+                    scheme_id,
+                    {"fetch": "col_arrayref"},
+                )
+                self.scheme[scheme_id] = Scheme(
+                    attributes=attributes, logger=self.logger
+                )
+        return self.scheme[scheme_id]
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses

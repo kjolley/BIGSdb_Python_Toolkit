@@ -34,6 +34,7 @@ from bigsdb.datastore import Datastore
 from bigsdb.xml_parser import XMLParser
 
 TEST_ISOLATE_DATABASE = "bigsdb_test_isolates"
+TEST_SEQDEF_DATABASE = "bigsdb_test_seqdef"
 TEST_USERS_DATABASE = "bigsdb_test_users"
 HOST = "localhost"
 PORT = 5432
@@ -282,6 +283,11 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(len(loci), 7)
         self.assertTrue("abcZ" in loci)
 
+    def test_scheme(self):
+        scheme = self.datastore.get_scheme(scheme_id=1)
+        profile = scheme.get_profile_by_primary_keys("11")
+        self.assertListEqual(profile, ["2", "3", "4", "3", "8", "4", "6"])
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")
@@ -289,20 +295,23 @@ class TestDatastore(unittest.TestCase):
         drop_and_recreate = True
         if PERSIST:
             isolatedb_exists = database_exists(cls.con, TEST_ISOLATE_DATABASE)
+            seqdefdb_exists = database_exists(cls.con, TEST_SEQDEF_DATABASE)
             userdb_exists = database_exists(cls.con, TEST_USERS_DATABASE)
-            if isolatedb_exists and userdb_exists:
+            if isolatedb_exists and seqdefdb_exists and userdb_exists:
                 drop_and_recreate = False
 
         if drop_and_recreate:  # Setup test isolate database
             cls.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = cls.con.cursor()
             cur.execute(f"DROP DATABASE IF EXISTS {TEST_ISOLATE_DATABASE}")
+            cur.execute(f"DROP DATABASE IF EXISTS {TEST_SEQDEF_DATABASE}")
             cur.execute(f"DROP DATABASE IF EXISTS {TEST_USERS_DATABASE}")
             cur.execute(f"DROP USER IF EXISTS {USER}")
             cur.execute(f"CREATE USER {USER}")
             cur.execute(f"ALTER USER {USER} WITH PASSWORD '{PASSWORD}'")
 
             cur.execute(f"CREATE DATABASE {TEST_ISOLATE_DATABASE}")
+            cur.execute(f"CREATE DATABASE {TEST_SEQDEF_DATABASE}")
             cur.execute(f"CREATE DATABASE {TEST_USERS_DATABASE}")
             cls.con.commit()
             cls.con.close()
@@ -318,6 +327,20 @@ class TestDatastore(unittest.TestCase):
             cls.con.commit()
             cur.close()
             cls.con.close()
+
+            cls.con = psycopg2.connect(dbname=TEST_SEQDEF_DATABASE)
+            cur = cls.con.cursor()
+
+            with open(f"{dir}/databases/bigsdb_test_seqdef.sql", "r") as f:
+                cur.copy_expert(sql=f.read(), file=f)
+            cur.execute(
+                "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES "
+                f"IN SCHEMA public TO {USER}"
+            )
+            cls.con.commit()
+            cur.close()
+            cls.con.close()
+
             cls.con = psycopg2.connect(dbname=TEST_USERS_DATABASE)
             cur = cls.con.cursor()
 
@@ -336,6 +359,8 @@ class TestDatastore(unittest.TestCase):
         cls.application = BaseApplication(testing=True)
         cls.config = cls.application._read_config_file(filename=conf_file)
         cls.config["host_map"] = {}
+        cls.config["dbuser"] = USER
+        cls.config["dbpassword"] = PASSWORD
 
         # Read database config
         dbase_config = f"{dir}/config_files/config.xml"
@@ -365,6 +390,7 @@ class TestDatastore(unittest.TestCase):
             system=cls.system,
             config=cls.config,
             parser=cls.parser,
+            data_connector=cls.data_connector,
         )
         cls.datastore.add_user_db(1, cls.user_db, TEST_USERS_DATABASE)
 
@@ -378,6 +404,7 @@ class TestDatastore(unittest.TestCase):
         cls.con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = cls.con.cursor()
         cur.execute(f"DROP DATABASE {TEST_ISOLATE_DATABASE}")
+        cur.execute(f"DROP DATABASE {TEST_SEQDEF_DATABASE}")
         cur.execute(f"DROP DATABASE {TEST_USERS_DATABASE}")
         cur.execute(f"DROP USER {USER}")
 
