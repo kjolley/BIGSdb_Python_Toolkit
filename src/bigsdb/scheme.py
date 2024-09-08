@@ -124,8 +124,11 @@ class Scheme:
 
         locus_term_string = " AND ".join(locus_terms)
         table = f"mv_scheme_{self.dbase_id}"
-
-        qry = f"SELECT {','.join(fields)} FROM {table} WHERE {locus_term_string}"
+        # Ensure field names are case-sensitive in output
+        field_list = []
+        for field in fields:
+            field_list.append(field + ' AS "' + field + '"')
+        qry = f"SELECT {','.join(field_list)} FROM {table} WHERE {locus_term_string}"
         cursor = self.db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
             cursor.execute(qry)
