@@ -301,9 +301,8 @@ class TestDatastore(unittest.TestCase):
                 "pgm": [{"allele_id": "6"}],
             }
         )
-        st, cc = values[0]
-        self.assertEqual(st, "11")
-        self.assertEqual(cc, "ST-11 complex")
+        self.assertEqual(values[0].get("st"), "11")
+        self.assertEqual(values[0].get("clonal_complex"), "ST-11 complex")
 
     @classmethod
     def setUpClass(cls):

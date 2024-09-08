@@ -19,6 +19,7 @@
 # see <https://www.gnu.org/licenses/>.
 
 import logging
+import psycopg2.extras
 
 
 class Scheme:
@@ -113,16 +114,19 @@ class Scheme:
                     values[locus]["allele_ids"].append("N")
                 if self["allow_presence"] and locus not in missing_loci:
                     values[locus]["allele_ids"].append("P")
+            allele_ids = values[locus]["allele_ids"]
+            formatted_allele_ids = ",".join(
+                [f"E'{allele_id}'" for allele_id in allele_ids]
+            )
             locus_terms.append(
-                f"profile[{self.locus_index[locus]}] IN "
-                f"(E'{','.join(map(str, values[locus]['allele_ids']))}')"
+                f"profile[{self.locus_index[locus]}] IN " f"({formatted_allele_ids})"
             )
 
         locus_term_string = " AND ".join(locus_terms)
         table = f"mv_scheme_{self.dbase_id}"
 
         qry = f"SELECT {','.join(fields)} FROM {table} WHERE {locus_term_string}"
-        cursor = self.db.cursor()
+        cursor = self.db.cursor(cursor_factory=psycopg2.extras.DictCursor)
         try:
             cursor.execute(qry)
         except Exception as e:
@@ -133,6 +137,6 @@ class Scheme:
             self.db.rollback()
             raise ValueError("Scheme configuration error")
 
-        field_data = cursor.fetchall()
+        field_data = [dict(row) for row in cursor.fetchall()]
         self.db.commit()
         return field_data
