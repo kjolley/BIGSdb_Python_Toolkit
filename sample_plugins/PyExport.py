@@ -281,9 +281,23 @@ class PyExport(Plugin):
                                     locus_used[locus] = 1
                                     row_values.append("; ".join(alleles.get(locus, [])))
                         if self.params.get("scheme_fields"):
+                            field_values = (
+                                self.datastore.get_scheme_field_values_by_isolate_id(
+                                    isolate_id=record["id"], scheme_id=scheme_id
+                                )
+                            )
                             fields = self.datastore.get_scheme_fields(scheme_id)
                             for field in fields:
-                                row_values.append("XXX")
+                                if field_values.get(field):
+                                    sorted_keys = sorted(
+                                        field_values[field].keys(), key=_sort_keys
+                                    )
+                                    try:
+                                        row_values.append("; ".join(list(sorted_keys)))
+                                    except:
+                                        row_values.append("")
+                                else:
+                                    row_values.append("")
                 for locus in loci:
                     if not locus_used.get(locus):
                         locus_used[locus] = 1
@@ -373,3 +387,14 @@ $(document).ready(function(){
     $('#locus').multiselectfilter();
 });
 """
+
+
+def _sort_keys(key):
+    try:
+        # Try to convert the key to an integer
+        return int(key)
+    except TypeError:
+        # If it fails, return the key as is (string)
+        return key
+    except ValueError:
+        return key

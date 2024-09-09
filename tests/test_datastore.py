@@ -326,6 +326,12 @@ class TestDatastore(unittest.TestCase):
         self.assertIn("3751", values.get("ST", {}))
         self.assertIn("ST-11 complex", values.get("clonal_complex", {}))
 
+    def test_get_scheme_allele_designations(self):
+        designations = self.datastore.get_scheme_allele_designations(
+            isolate_id=3, scheme_id=1
+        )
+        self.assertEqual(designations["abcZ"][0]["allele_id"], "119")
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")

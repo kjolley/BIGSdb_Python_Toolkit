@@ -701,7 +701,7 @@ class Datastore(object):
     def get_scheme(self, scheme_id):
         if scheme_id not in self.scheme:
             attributes = self.get_scheme_info(scheme_id)
-            if "dbase_name" in attributes:
+            if attributes.get("dbase_name"):
                 try:
                     attributes["db"] = self.data_connector.get_connection(
                         dbase_name=attributes["dbase_name"],
@@ -791,6 +791,30 @@ class Datastore(object):
 
         return values
 
+    def get_scheme_field_values_by_isolate_id(self, isolate_id, scheme_id, options={}):
+        designations = self.get_scheme_allele_designations(isolate_id, scheme_id)
+
+        if options.get("allow_presence"):
+            present = self.run_query(
+                "SELECT a.locus FROM allele_sequences a JOIN scheme_members s "
+                "ON a.locus=s.locus WHERE (a.isolate_id,s.scheme_id)=(?,?)",
+                [isolate_id, scheme_id],
+                {
+                    "fetch": "col_arrayref",
+                },
+            )
+            for locus in present:
+                if locus not in designations:
+                    designations[locus] = [{"allele_id": "P", "status": "confirmed"}]
+
+        if not designations:
+            return {}
+
+        field_values = self.get_scheme_field_values_by_designations(
+            scheme_id, designations, options
+        )
+        return field_values
+
     def _convert_designations_to_profile_names(self, scheme_id, designations):
         data = self.run_query(
             "SELECT locus, profile_name FROM scheme_members WHERE scheme_id=?",
@@ -802,6 +826,47 @@ class Datastore(object):
                 continue
             designations[profile_name] = designations.pop(locus, None)
         return
+
+    def get_scheme_allele_designations(self, isolate_id, scheme_id, options={}):
+        designations = {}
+
+        if scheme_id:
+            data = self.run_query(
+                "SELECT * FROM allele_designations WHERE isolate_id=? AND locus IN "
+                "(SELECT locus FROM scheme_members WHERE scheme_id=?) ORDER BY status, "
+                "(substring(allele_id, '^[0-9]+'))::int, allele_id",
+                [isolate_id, scheme_id],
+                {
+                    "fetch": "all_arrayref",
+                    "slice": {},
+                },
+            )
+            for designation in data:
+                if designation["locus"] not in designations:
+                    designations[designation["locus"]] = []
+                designations[designation["locus"]].append(designation)
+        else:
+            set_clause = (
+                "SELECT locus FROM scheme_members WHERE scheme_id IN (SELECT "
+                f"scheme_id FROM set_schemes WHERE set_id={options['set_id']})"
+                if options.get("set_id")
+                else "SELECT locus FROM scheme_members"
+            )
+            data = self.run_query(
+                "SELECT * FROM allele_designations WHERE isolate_id=? AND locus "
+                f"NOT IN ({set_clause}) ORDER BY status, date_entered, allele_id",
+                [isolate_id],
+                {
+                    "fetch": "all_arrayref",
+                    "slice": {},
+                },
+            )
+            for designation in data:
+                if designation["locus"] not in designations:
+                    designations[designation["locus"]] = []
+                designations[designation["locus"]].append(designation)
+
+        return designations
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
