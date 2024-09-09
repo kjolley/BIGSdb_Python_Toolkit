@@ -184,18 +184,6 @@ class SchemeSelector:
 
                 scheme["name"] = scheme["name"].replace("&", "&amp;")
 
-                if isolate_id is None or self._scheme_data_present(
-                    scheme["id"], isolate_id
-                ):
-                    data_exists = True
-                    id_attr = (
-                        f' id="s_{scheme["id"]}"'
-                        if options.get("select_schemes")
-                        else ""
-                    )
-                    temp_buffer += f'<li{id_attr}><a>{scheme["name"]}</a>\n'
-                    temp_buffer += "</li>\n"
-
             if groups_with_no_parent:
                 temp_buffer += "</ul></li>"
 
@@ -237,3 +225,14 @@ class SchemeSelector:
             not_in_group.append({"id": scheme_id, "name": scheme_info["name"]})
 
         return not_in_group
+
+    def _should_display_scheme_in_tree(self, scheme_id, options):
+        if options.get("isolate_display") and not self.prefs[
+            "isolate_display_schemes"
+        ].get(scheme_id):
+            return False
+        if options.get("analysis_pref") and not self.prefs["analysis_schemes"].get(
+            scheme_id
+        ):
+            return False
+        return True
