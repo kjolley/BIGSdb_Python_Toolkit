@@ -304,6 +304,28 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(values[0].get("ST"), "11")
         self.assertEqual(values[0].get("clonal_complex"), "ST-11 complex")
 
+    def test_get_scheme_field_values_by_designations(self):
+        designations = {
+            "abcZ": [{"allele_id": "2", "status": "confirmed"}],
+            "adk": [{"allele_id": "3", "status": "confirmed"}],
+            "aroE": [
+                {"allele_id": "4", "status": "confirmed"},
+                {"allele_id": "9", "status": "confirmed"},
+            ],
+            "fumC": [{"allele_id": "3", "status": "confirmed"}],
+            "gdh": [{"allele_id": "8", "status": "confirmed"}],
+            "pdhC": [{"allele_id": "4", "status": "confirmed"}],
+            "pgm": [{"allele_id": "6", "status": "confirmed"}],
+        }
+        values = self.datastore.get_scheme_field_values_by_designations(
+            scheme_id=1,
+            designations=designations,
+        )
+
+        self.assertIn("11", values.get("ST", {}))
+        self.assertIn("3751", values.get("ST", {}))
+        self.assertIn("ST-11 complex", values.get("clonal_complex", {}))
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")

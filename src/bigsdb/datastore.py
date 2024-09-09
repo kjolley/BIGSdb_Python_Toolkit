@@ -739,6 +739,70 @@ class Datastore(object):
                 )
         return self.scheme[scheme_id]
 
+    def get_scheme_field_values_by_designations(
+        self, scheme_id, designations, options={}
+    ):
+        field_data = []
+        scheme = None
+        try:
+            scheme = self.get_scheme(scheme_id)
+        except Exception as e:
+            self.logger.warn(f"Scheme {scheme_id} database is not configured correctly")
+
+        if scheme is None:
+            return
+
+        if not options.get("no_convert"):
+            self._convert_designations_to_profile_names(scheme_id, designations)
+
+        try:
+            field_data = scheme.get_field_values_by_designations(designations)
+        except Exception as e:
+            logger.warn(f"Scheme {scheme_id} database is not configured correctly")
+
+        if options.get("no_status"):
+            return field_data
+
+        values = {}
+        loci = self.get_scheme_loci(scheme_id)
+        fields = self.get_scheme_fields(scheme_id)
+
+        for data in field_data:
+            status = "confirmed"
+            for locus in loci:
+                if designations.get(locus) is None:
+                    continue
+                for designation in designations[locus]:
+                    if (
+                        designation["allele_id"] in ["N", "0"]
+                        or designation.get("status") == "confirmed"
+                    ):
+                        continue
+                    status = "provisional"
+                    break
+                if status == "provisional":
+                    break
+
+            for field in fields:
+
+                data[field] = data.get(field, "")
+                if values.get(field, {}).get(data[field], "") != "confirmed":
+                    values.setdefault(field, {})[data[field]] = {"status": status}
+
+        return values
+
+    def _convert_designations_to_profile_names(self, scheme_id, designations):
+        data = self.run_query(
+            "SELECT locus, profile_name FROM scheme_members WHERE scheme_id=?",
+            scheme_id,
+            {"fetch": "all_arrayref"},
+        )
+        for locus, profile_name in data:
+            if profile_name is None or locus == profile_name:
+                continue
+            designations[profile_name] = designations.pop(locus, None)
+        return
+
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses
 # %s. Rewrite so that the same SQL works with both.
