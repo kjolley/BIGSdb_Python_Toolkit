@@ -26,6 +26,7 @@ from io import StringIO
 from collections import defaultdict
 import bigsdb.utils
 from bigsdb.scheme import Scheme
+from bigsdb.locus import Locus
 
 
 class Datastore(object):
@@ -58,6 +59,7 @@ class Datastore(object):
         self.prefs = defaultdict(nested_defaultdict)
         self.user_dbs = {}
         self.scheme = {}
+        self.locus = {}
 
     def run_query(self, qry, values=[], options={}):
         if type(values) is not list:
@@ -867,6 +869,55 @@ class Datastore(object):
                 designations[designation["locus"]].append(designation)
 
         return designations
+
+    def get_locus(self, locus):
+        if locus not in self.locus:
+            attributes = self.get_locus_info(locus)
+            if attributes.get("dbase_name"):
+                try:
+                    attributes["db"] = self.data_connector.get_connection(
+                        dbase_name=attributes["dbase_name"],
+                        host=attributes["dbase_host"]
+                        or self.config.get("dbase_host")
+                        or self.config.get("dbhost")
+                        or self.system.get("host"),
+                        user=attributes["dbase_user"]
+                        or self.config.get("dbase_user")
+                        or self.config.get("dbuser")
+                        or self.system.get("user"),
+                        password=attributes["dbase_password"]
+                        or self.config.get("dbase_password")
+                        or self.config.get("dbpassword")
+                        or self.system.get("password"),
+                    )
+
+                except Exception as e:
+                    self.logger.error(f"Error connecting locus database :{locus}: {e}")
+
+                self.locus[locus] = Locus(attributes=attributes, logger=self.logger)
+        return self.locus[locus]
+
+    def get_locus_info(self, locus, options={}):
+        if self.cache["locus_info"].get(locus):
+            return self.cache["locus_info"][locus]
+        locus_info = self.run_query(
+            "SELECT * FROM loci WHERE id=%s", locus, {"fetch": "row_hashref"}
+        )
+        if options.get("set_id"):
+            set_locus = self.run_query(
+                "SELECT * FROM set_loci WHERE set_id=%s AND locus=%s",
+                [options["set_id"], locus],
+                {"fetch": "row_hashref"},
+            )
+            for key in [
+                "set_name",
+                "set_common_name",
+                "formatted_set_name",
+                "formatted_set_common_name",
+            ]:
+                locus_info[key] = set_locus.get(key)
+        self.cache["locus_info"][locus] = locus_info
+        return self.cache["locus_info"][locus]
 
 
 # BIGSdb Perl DBI code uses ? as placeholders in SQL queries. psycopg2 uses

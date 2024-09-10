@@ -76,11 +76,11 @@ class PyExport(Plugin):
         selected_ids = self.get_selected_ids()
         print(
             '<div class="box" id="queryform"><div class="scrollable">'
-            "<p>Currently this is just a demonstration of a plugin that uses the "
-            "offline job manager. You can select isolate ids and fields and the job "
-            "will get sent to the queue. When run, it will create a tab-delimited "
-            "text file and an Excel file containing the primary metadata for "
-            "each selected isolate record.</p>"
+            "<p>This is a demonstration of a plugin that uses the "
+            "offline job manager. You can select isolate ids, fields, loci and schemes "
+            "and the job will get sent to the queue. When run, it will create a "
+            "tab-delimited text file and an Excel file containing the requested "
+            "fields for each selected isolate record.</p>"
         )
         self.start_form()
         self.print_seqbin_isolate_fieldset(

@@ -332,6 +332,50 @@ class TestDatastore(unittest.TestCase):
         )
         self.assertEqual(designations["abcZ"][0]["allele_id"], "119")
 
+    def test_get_locus_info(self):
+        info = self.datastore.get_locus_info("abcZ")
+        self.assertEqual(info["data_type"], "DNA")
+        self.assertEqual(info["length"], 433)
+
+    def test_get_locus_get_allele_sequence(self):
+        locus = self.datastore.get_locus("abcZ")
+        sequence = locus.get_allele_sequence("1")
+        self.assertEqual(
+            sequence,
+            "TTTGATACTGTTGCCGAAGGTTTGGGCGAAATTCGCGATTTATTGCGCCGTTATCATCATGTCAGCCATGAGTT"
+            "GGAAAATGGTTCGAGTGAGGCCTTATTGAAAGAGCTCAACGAATTGCAACTTGAGATCGAAGCGAAGGACGGCT"
+            "GGAAGTTGGATGCGGCGGTGAAGCAGACTTTGGGCGAACTCGGTTTGCCGGAAAACGAAAAAATCGGCAACCTC"
+            "TCCGGCGGTCAGAAAAAGCGCGTCGCCTTGGCGCAGGCTTGGGTGCAGAAGCCCGACGTATTGCTGCTCGATGA"
+            "ACCGACCAACCATTTGGACATCGACGCGATTATTTGGTTGGAAAACCTGCTCAAAGCGTTTGAAGGCAGCCTGG"
+            "TTGTGATTACCCACGACCGCCGTTTTTTGGACAATATCGCCACGCGGATTGTCGAACTCGATC",
+        )
+
+    def test_get_locus_get_all_sequences(self):
+        locus = self.datastore.get_locus("abcZ")
+        sequences = locus.get_all_sequences()
+        self.assertEqual(
+            sequences["25"],
+            "TTTGATACCGTTGCCGAAGGTTTGGGTAAAATTCGCGATTTATTGCGCCGTTACCACCGCGTCGGTCATGAGTT"
+            "GGAAAACGGTTCGGGTGAGGCTTTGTTGAAAGAACTCAACGAATTACAACTTGAAATCGAAGCGAAGGATGGCT"
+            "GGAAGCTGGATGCGGCAGTCAAGCAGACTTTGGGCGAACTCGGTTTGCCGGAAAACGAAAAAATCGGCAACCTT"
+            "TCCGGCGGTCAGAAAAAGCGTGTCGCCTTGGCGCAGGCTTGGGTGCAGAAGCCCGACGTATTGCTGCTGGACGA"
+            "ACCGACCAACCATTTGGATATTGACGCGATTATCTGGTTGGAAAACCTGCTCAAGGCGTTTGAAGGCAGCTTGG"
+            "TCGTGATTACCCACGACCGCCGTTTTTTGGATAATATCGCTACGCGGATTGTCGAACTCGATC",
+        )
+
+    def test_get_locus_get_allele_id_from_sequence(self):
+        locus = self.datastore.get_locus("abcZ")
+        sequence = (
+            "TTTGATACCGTTGCCGAAGGTTTGGGTAAAATTCGCGATTTATTGCGCCGTTACCACCGCGTCGGTCATGAGTT"
+            "GGAAAACGGTTCGGGTGAGGCTTTGTTGAAAGAACTCAACGAATTACAACTTGAAATCGAAGCGAAGGATGGCT"
+            "GGAAGCTGGATGCGGCAGTCAAGCAGACTTTGGGCGAACTCGGTTTGCCGGAAAACGAAAAAATCGGCAACCTT"
+            "TCCGGCGGTCAGAAAAAGCGTGTCGCCTTGGCGCAGGCTTGGGTGCAGAAGCCCGACGTATTGCTGCTGGACGA"
+            "ACCGACCAACCATTTGGATATTGACGCGATTATCTGGTTGGAAAACCTGCTCAAGGCGTTTGAAGGCAGCTTGG"
+            "TCGTGATTACCCACGACCGCCGTTTTTTGGATAATATCGCTACGCGGATTGTCGAACTCGATC"
+        )
+        allele_id = locus.get_allele_id_from_sequence(sequence)
+        self.assertEqual(allele_id, "25")
+
     @classmethod
     def setUpClass(cls):
         cls.con = psycopg2.connect(dbname="postgres")
