@@ -81,8 +81,6 @@ class PyExport(Plugin):
             "will get sent to the queue. When run, it will create a tab-delimited "
             "text file and an Excel file containing the primary metadata for "
             "each selected isolate record.</p>"
-            "<p>New methods will be added later to support selecting specific fields, "
-            "loci, and schemes.</p>"
         )
         self.start_form()
         self.print_seqbin_isolate_fieldset(
