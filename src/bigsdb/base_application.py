@@ -21,6 +21,7 @@
 import configparser
 import logging
 from pathlib import Path
+from datetime import date
 import bigsdb.utils
 from bigsdb.xml_parser import XMLParser
 from bigsdb.data_connector import DataConnector
@@ -102,7 +103,8 @@ class BaseApplication(object):
             elif bigsdb.utils.is_float(value):
                 value = float(value)
             elif bigsdb.utils.is_date(value):
-                value = date(value)
+                year, month, day = map(int, value.split("-"))
+                value = date(year, month, day)
             dict[key] = value
         # refdb attribute has been renamed ref_db for consistency
         # with other databases (refdb still works)
