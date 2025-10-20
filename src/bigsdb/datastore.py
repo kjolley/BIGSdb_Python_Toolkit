@@ -1,5 +1,5 @@
 # Written by Keith Jolley
-# Copyright (c) 2024, University of Oxford
+# Copyright (c) 2024-2025, University of Oxford
 # E-mail: keith.jolley@biology.ox.ac.uk
 #
 # This file is part of BIGSdb Python Toolkit.
@@ -537,7 +537,7 @@ class Datastore(object):
                 continue
             query_loci.append(row[0])
 
-        query_loci = list(set(query_loci))
+        query_loci = list(dict.fromkeys(query_loci))
         return query_loci
 
     def get_loci_in_no_scheme(self, options={}):
