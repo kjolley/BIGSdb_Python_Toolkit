@@ -67,51 +67,51 @@ class Datastore(object):
         db = options.get("db", self.db)
         fetch = options.get("fetch", "row_array")
         qry = replace_placeholders(qry)
-        cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        try:
-            cursor.execute(qry, values)
-        except Exception as e:
-            self.logger.error(f"{e} Query:{qry}")
-
-        if fetch == "col_arrayref":
-            data = None
+        with db.cursor(cursor_factory=psycopg2.extras.DictCursor) as cursor:
             try:
-                data = [row[0] for row in cursor.fetchall()]
+                cursor.execute(qry, values)
             except Exception as e:
                 self.logger.error(f"{e} Query:{qry}")
-            return data
 
-        # No differentiation between Perl DBI row_array and row_arrayref in Python.
-        if fetch == "row_arrayref" or fetch == "row_array":
-            value = cursor.fetchone()
-            if value == None:
-                return
-            if len(value) == 1:
-                return value[0]
-            else:
-                return value
-        if fetch == "row_hashref":
-            row = cursor.fetchone()
-            if row is not None:
-                return dict(row)
-            else:
-                return
-        if fetch == "all_hashref":
-            if "key" not in options:
-                raise ValueError("Key field(s) needs to be passed.")
-            return {row[options["key"]]: dict(row) for row in cursor.fetchall()}
-        if fetch == "all_arrayref":
-            if "slice" in options and options["slice"]:
-                return [
-                    {key: dict(row)[key] for key in options["slice"]}
-                    for row in cursor.fetchall()
-                ]
-            elif "slice" in options:  # slice = {}
-                return [dict(row) for row in cursor.fetchall()]
-            else:
-                return cursor.fetchall()
-        self.logger.error("Query failed - invalid fetch method specified.")
-        return None
+            if fetch == "col_arrayref":
+                data = None
+                try:
+                    data = [row[0] for row in cursor.fetchall()]
+                except Exception as e:
+                    self.logger.error(f"{e} Query:{qry}")
+                return data
+
+            # No differentiation between Perl DBI row_array and row_arrayref in Python.
+            if fetch == "row_arrayref" or fetch == "row_array":
+                value = cursor.fetchone()
+                if value == None:
+                    return
+                if len(value) == 1:
+                    return value[0]
+                else:
+                    return value
+            if fetch == "row_hashref":
+                row = cursor.fetchone()
+                if row is not None:
+                    return dict(row)
+                else:
+                    return
+            if fetch == "all_hashref":
+                if "key" not in options:
+                    raise ValueError("Key field(s) needs to be passed.")
+                return {row[options["key"]]: dict(row) for row in cursor.fetchall()}
+            if fetch == "all_arrayref":
+                if "slice" in options and options["slice"]:
+                    return [
+                        {key: dict(row)[key] for key in options["slice"]}
+                        for row in cursor.fetchall()
+                    ]
+                elif "slice" in options:  # slice = {}
+                    return [dict(row) for row in cursor.fetchall()]
+                else:
+                    return cursor.fetchall()
+            self.logger.error("Query failed - invalid fetch method specified.")
+            return None
 
     def initiate_user_dbs(self):
         configs = self.run_query(
