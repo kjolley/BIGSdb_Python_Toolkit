@@ -703,6 +703,8 @@ class Datastore(object):
     def get_scheme(self, scheme_id):
         if scheme_id not in self.scheme:
             attributes = self.get_scheme_info(scheme_id)
+            if attributes is None:
+                return
             if attributes.get("dbase_name"):
                 try:
                     attributes["db"] = self.data_connector.get_connection(
