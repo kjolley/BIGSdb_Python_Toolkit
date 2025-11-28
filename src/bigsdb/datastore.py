@@ -700,6 +700,13 @@ class Datastore(object):
         fields = self.get_all_scheme_fields()
         return fields.get(scheme_id, [])
 
+    def get_scheme_field_info(self, scheme_id, field):
+        return self.run_query(
+            "SELECT * FROM scheme_fields WHERE scheme_id=%s AND field=%s",
+            [scheme_id, field],
+            {"fetch": "row_hashref"},
+        )
+
     def get_scheme(self, scheme_id):
         if scheme_id not in self.scheme:
             attributes = self.get_scheme_info(scheme_id)
